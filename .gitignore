@@ -1,0 +1,53 @@
+# ===== 의존성 =====
+node_modules/
+**/node_modules/
+.pnp
+.pnp.js
+
+# ===== 빌드 산출물 =====
+dist/
+**/dist/
+build/
+*.tsbuildinfo
+
+# ===== 환경변수 (시크릿) =====
+# 실제 값이 든 .env 는 절대 커밋하지 않는다.
+.env
+.env.*
+*.local
+# 단, 시크릿 없는 템플릿(.env.example)은 추적한다.
+!.env.example
+
+# ===== 로그 =====
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+logs/
+
+# ===== 런타임/데이터 =====
+data/
+*.sqlite
+*.sqlite-*
+*.pid
+
+# ===== 테스트/커버리지 =====
+coverage/
+.nyc_output/
+
+# ===== 캐시 =====
+.cache/
+.vite/
+.eslintcache
+
+# ===== 에디터 / OS =====
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+
+# ===== 배포 =====
+# 인증서/키는 호스트(/etc/nginx/ssl)에 있고 레포에 두지 않는다.
+*.pem
+*.key
+*.crt

@@ -1,0 +1,14 @@
+node_modules
+**/node_modules
+dist
+**/dist
+.git
+.gitignore
+data
+*.sqlite
+*.sqlite-*
+.env
+.env.*
+!.env.development
+deploy
+*.md
