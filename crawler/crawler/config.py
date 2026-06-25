@@ -22,10 +22,13 @@ DATABASE_URL = _get(
 # 사람인 공식 오픈 API 키 (https://oapi.saramin.co.kr). 없으면 사람인 어댑터는 건너뜀.
 SARAMIN_API_KEY = _get("SARAMIN_API_KEY")
 
-# 매일 크롤링할 시각(시/분) + 타임존. APScheduler 데몬 모드에서 사용.
+# 매일 크롤링할 시각(시/분) + 타임존. (구버전 일일 스케줄 — 현재는 per-source 주기 사용)
 CRAWL_HOUR = int(_get("CRAWL_HOUR", "5"))
 CRAWL_MINUTE = int(_get("CRAWL_MINUTE", "0"))
 TZ = _get("TZ", "Asia/Seoul")
+
+# 데몬이 crawl_settings(주기)·crawl_commands(수동 실행) 를 확인하는 폴링 간격(초).
+POLL_SECONDS = int(_get("POLL_SECONDS", "60"))
 
 # 어댑터별 1회 수집 상한(과도한 요청 방지).
 MAX_PER_SOURCE = int(_get("MAX_PER_SOURCE", "300"))

@@ -44,6 +44,65 @@ def _derive_job_id(p: JobPosting) -> str:
     return "url:" + hashlib.sha1(p.source_url.encode("utf-8")).hexdigest()[:24]
 
 
+# ── 관리자 크롤링 설정 / 수동 실행 큐 ─────────────────────────────────────────
+
+def seed_crawl_settings(conn: psycopg.Connection, sources: list[tuple[str, str, bool]]) -> None:
+    """알려진 출처(source, label, implemented)를 시드. 라벨/구현여부만 최신화하고
+    사용자가 바꾼 주기/모드/활성화 값은 보존한다."""
+    for source, label, implemented in sources:
+        conn.execute(
+            """INSERT INTO crawl_settings (source, label, implemented)
+               VALUES (%s, %s, %s)
+               ON CONFLICT (source) DO UPDATE
+                 SET label = EXCLUDED.label, implemented = EXCLUDED.implemented""",
+            (source, label, implemented),
+        )
+
+
+def due_sources(conn: psycopg.Connection) -> list[str]:
+    """지금 자동 수집해야 할 출처 목록.
+    enabled=TRUE, mode='auto', implemented=TRUE 이고, 한 번도 안 돌았거나
+    (마지막 실행 + 주기) 가 지난 출처."""
+    rows = conn.execute(
+        """SELECT source FROM crawl_settings
+           WHERE enabled = TRUE AND mode = 'auto' AND implemented = TRUE
+             AND (last_run_at IS NULL
+                  OR last_run_at + (interval_hours || ' hours')::interval <= now())
+           ORDER BY source"""
+    ).fetchall()
+    return [r[0] for r in rows]
+
+
+def mark_source_run(conn: psycopg.Connection, source: str, status: str) -> None:
+    """한 출처의 마지막 실행 시각/결과를 기록."""
+    conn.execute(
+        "UPDATE crawl_settings SET last_run_at = now(), last_status = %s, updated_at = now() WHERE source = %s",
+        (status, source),
+    )
+
+
+def claim_command(conn: psycopg.Connection) -> tuple[int, str] | None:
+    """대기 중(pending) 수동 실행 명령 하나를 'running' 으로 선점해 (id, source) 반환.
+    없으면 None. 동시 실행 안전(SKIP LOCKED)."""
+    row = conn.execute(
+        """UPDATE crawl_commands SET status = 'running', started_at = now()
+           WHERE id = (
+             SELECT id FROM crawl_commands WHERE status = 'pending'
+             ORDER BY requested_at LIMIT 1 FOR UPDATE SKIP LOCKED
+           )
+           RETURNING id, source"""
+    ).fetchone()
+    return (row[0], row[1]) if row else None
+
+
+def finish_command(conn: psycopg.Connection, cmd_id: int, status: str, result: str) -> None:
+    """수동 실행 명령을 done/error 로 마감."""
+    conn.execute(
+        "UPDATE crawl_commands SET status = %s, finished_at = now(), result = %s WHERE id = %s",
+        (status, result, cmd_id),
+    )
+
+
 def upsert_jobs(conn: psycopg.Connection, postings: list[JobPosting]) -> int:
     """공고 목록을 UPSERT. 반환: 처리(삽입+갱신)된 건수."""
     if not postings:

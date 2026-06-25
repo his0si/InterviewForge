@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import type { JobPosting, PublicUser } from "@e-lifethon/shared";
 import { getJobs } from "../api";
 import AppShell from "../components/AppShell";
+import AdminCrawlPanel from "../components/AdminCrawlPanel";
 import PageHeader from "../components/PageHeader";
 import { ExternalLinkIcon, RotateIcon, SearchIcon } from "../components/icons";
 import { jobRole, sourceMeta } from "./sourceMeta";
@@ -13,7 +14,7 @@ function JobCard({ job }: { job: JobPosting }) {
   const role = jobRole(job.job_categories);
   return (
     <Link to={`/jobs/${job.id}`} className="tr-post">
-      <span className="job-src-pill" style={{ background: m.color }}>
+      <span className="job-src-pill" style={{ color: m.color }}>
         {m.label}
       </span>
       <div className="tr-post-body">
@@ -83,6 +84,8 @@ export function Jobs({
       </nav>
 
       <PageHeader title="채용 공고">여러 사이트의 공고를 한곳에서 — 카드를 누르면 상세, 상세에서 원본으로 이동합니다.</PageHeader>
+
+      {user.is_admin && <AdminCrawlPanel />}
 
       <div className="tr-filterbar">
         <button

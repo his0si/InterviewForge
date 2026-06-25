@@ -69,7 +69,7 @@ export function JobDetail({
 
       <div className="tr-detail-card">
         <div className="tr-detail-head">
-          <span className="job-src-pill" style={{ background: m.color }}>{m.label}</span>
+          <span className="job-src-pill" style={{ color: m.color }}>{m.label}</span>
           <span className="tr-date">
             {job.deadline ? `마감 ~${job.deadline}` : job.deadline_text ?? ""}
           </span>

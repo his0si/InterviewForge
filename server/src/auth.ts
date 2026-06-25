@@ -24,7 +24,7 @@ const IS_PROD = process.env.NODE_ENV === "production";
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // 쿠키(if_token)에서 로그인 사용자 id 를 꺼낸다. 없으면 null.
-function currentUserId(req: { cookies?: Record<string, string | undefined> }): number | null {
+export function currentUserId(req: { cookies?: Record<string, string | undefined> }): number | null {
   const raw = req.cookies?.[COOKIE_NAME];
   if (!raw) return null;
   try {
@@ -41,6 +41,7 @@ function toPublicUser(row: {
   nickname: string;
   jobs: string[] | null;
   is_verified: boolean;
+  is_admin: boolean;
   created_at: Date | string;
 }): PublicUser {
   return {
@@ -49,6 +50,7 @@ function toPublicUser(row: {
     nickname: row.nickname ?? "",
     jobs: row.jobs ?? [],
     is_verified: row.is_verified,
+    is_admin: row.is_admin ?? false,
     created_at:
       row.created_at instanceof Date
         ? row.created_at.toISOString()
@@ -186,7 +188,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       const password = req.body?.password ?? "";
 
       const row = await pool.query(
-        "SELECT id, email, password, nickname, jobs, is_verified, created_at FROM users WHERE email = $1",
+        "SELECT id, email, password, nickname, jobs, is_verified, is_admin, created_at FROM users WHERE email = $1",
         [email]
       );
       const fail = () =>
@@ -228,7 +230,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     try {
       const payload = jwt.verify(raw, JWT_SECRET) as unknown as { sub: number };
       const row = await pool.query(
-        "SELECT id, email, nickname, jobs, is_verified, created_at FROM users WHERE id = $1",
+        "SELECT id, email, nickname, jobs, is_verified, is_admin, created_at FROM users WHERE id = $1",
         [payload.sub]
       );
       if (!row.rowCount) return reply.send({ user: null } as MeResponse);
@@ -268,7 +270,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
 
       const row = await pool.query(
         `UPDATE users SET nickname = $1, jobs = $2 WHERE id = $3
-         RETURNING id, email, nickname, jobs, is_verified, created_at`,
+         RETURNING id, email, nickname, jobs, is_verified, is_admin, created_at`,
         [nickname, jobs, userId]
       );
       if (!row.rowCount) {

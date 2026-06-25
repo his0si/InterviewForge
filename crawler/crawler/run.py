@@ -5,7 +5,7 @@ import logging
 
 from .adapters import ALL_ADAPTERS
 from .config import SUMMARY_LIMIT
-from .db import connect, init_schema, upsert_jobs
+from .db import connect, init_schema, mark_source_run, upsert_jobs
 from .llm import summarize, extract_fields
 
 log = logging.getLogger("crawler.run")
@@ -74,12 +74,16 @@ def summarize_pending(limit: int = SUMMARY_LIMIT) -> int:
     return done
 
 
-def run_once() -> dict[str, int]:
-    """한 번의 전체 크롤링 사이클. 반환: {source: 처리건수}."""
+def run_once(only: set[str] | None = None) -> dict[str, int]:
+    """한 번의 크롤링 사이클. only 가 주어지면 그 출처들만 실행(수동/주기 단위 실행용),
+    None 이면 구현된 모든 어댑터를 실행. 반환: {source: 처리건수}.
+    각 출처의 마지막 실행 시각/결과는 crawl_settings 에 기록한다."""
     init_schema()
     results: dict[str, int] = {}
     with connect() as conn:
         for adapter in ALL_ADAPTERS:
+            if only is not None and adapter.source not in only:
+                continue
             if not adapter.enabled:
                 log.info("[%s] 비활성(미구현) — 건너뜀", adapter.source)
                 continue
@@ -87,10 +91,12 @@ def run_once() -> dict[str, int]:
                 postings = adapter.fetch()
                 n = upsert_jobs(conn, postings)
                 results[adapter.source] = n
+                mark_source_run(conn, adapter.source, f"{n}건 수집")
                 log.info("[%s] %s: %d건 저장", adapter.source, adapter.label, n)
-            except Exception:  # 한 사이트 실패가 전체를 막지 않도록
+            except Exception as exc:  # 한 사이트 실패가 전체를 막지 않도록
                 log.exception("[%s] 크롤링 실패", adapter.source)
                 results[adapter.source] = -1
+                mark_source_run(conn, adapter.source, f"실패: {exc}"[:200])
     log.info("크롤링 사이클 완료: %s", results)
     # 수집 후, 새 공고에 구조화 필드(회사/직무/지역/경력/고용형태) + AI 요약 백필
     try:

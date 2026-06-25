@@ -300,6 +300,18 @@
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+
+.tr-filter-pill:hover {
+  border-color: rgba(0, 0, 0, 0.22);
+}
+
+.tr-filter-pill.active {
+  background: #393b54;
+  border-color: #393b54;
+  color: #fff;
+  font-weight: 600;
 }
 
 .tr-filter-right {
@@ -926,9 +938,10 @@
   display: inline-flex;
   align-items: center;
   height: 24px;
-  padding: 0 10px;
+  padding: 0 11px;
   border-radius: 999px;
-  color: #fff;
+  border: 1px solid currentColor;
+  background: #fff;
   font-size: 12px;
   font-weight: 600;
   white-space: nowrap;

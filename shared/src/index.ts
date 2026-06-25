@@ -13,6 +13,7 @@ export interface PublicUser {
   nickname: string;
   jobs: string[];
   is_verified: boolean;
+  is_admin: boolean; // 마스터(관리자) 계정 여부 — 일반 가입자는 항상 false
   created_at: string;
 }
 
@@ -80,5 +81,28 @@ export interface JobsResponse {
   items: JobPosting[];
   total: number;
   sources: string[]; // 현재 DB에 존재하는 출처 목록(필터칩용)
+}
+
+// ── 관리자: 사이트별 크롤링 설정 ───────────────────────────────────────────
+// 마스터(is_admin) 계정만 조회·수정할 수 있다. 크롤러(파이썬 데몬)가 이 값을 읽어
+// 사이트마다 정해진 주기로 자동 수집하거나(auto), 수동 실행만 받거나(manual),
+// 비활성(enabled=false)이면 건너뛴다.
+export type CrawlMode = "auto" | "manual";
+
+export interface CrawlSetting {
+  source: string; // 출처 키(saramin, wanted, …)
+  label: string; // 사람이 읽는 이름(사람인 등)
+  implemented: boolean; // 어댑터가 실제 구현돼 있는지(false면 켜도 수집 안 됨)
+  interval_hours: number; // 자동 수집 주기(시간). auto 모드에서만 의미.
+  mode: CrawlMode; // auto: 주기마다 자동 / manual: 수동 실행만
+  enabled: boolean; // false면 자동·수동 모두 건너뜀(비활성화)
+  last_run_at: string | null; // 마지막 수집 시각(ISO)
+  next_run_at: string | null; // 다음 예정 시각(auto·enabled일 때만 계산)
+  last_status: string | null; // 마지막 실행 결과 요약
+  pending: boolean; // 수동 실행이 큐에 걸려 처리 대기/진행 중인지
+}
+
+export interface CrawlSettingsResponse {
+  items: CrawlSetting[];
 }
 

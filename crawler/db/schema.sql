@@ -78,3 +78,31 @@ ALTER TABLE job_postings ADD COLUMN IF NOT EXISTS ai_summary_at TIMESTAMPTZ;
 CREATE INDEX IF NOT EXISTS idx_job_postings_source     ON job_postings (source);
 CREATE INDEX IF NOT EXISTS idx_job_postings_deadline   ON job_postings (deadline);
 CREATE INDEX IF NOT EXISTS idx_job_postings_active_seen ON job_postings (is_active, first_seen_at DESC);
+
+-- ============================================================================
+-- 관리자(마스터) 가 제어하는 사이트별 크롤링 설정 + 수동 실행 큐.
+-- InterviewForge 서버(Node)와 공유한다: 서버가 마스터 화면에서 읽고/수정하고,
+-- 수동 실행은 crawl_commands 에 한 줄 넣어두면 이 크롤러가 폴링해서 처리한다.
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS crawl_settings (
+  source         TEXT PRIMARY KEY,               -- 출처 키(saramin 등)
+  label          TEXT NOT NULL DEFAULT '',       -- 사람이 읽는 이름
+  implemented    BOOLEAN NOT NULL DEFAULT TRUE,  -- 어댑터 구현 여부(false면 켜도 수집 안 됨)
+  interval_hours INT NOT NULL DEFAULT 24,        -- 자동 수집 주기(시간)
+  mode           TEXT NOT NULL DEFAULT 'auto',   -- 'auto' | 'manual'
+  enabled        BOOLEAN NOT NULL DEFAULT TRUE,  -- 비활성화 토글
+  last_run_at    TIMESTAMPTZ,                    -- 마지막 수집 시각
+  last_status    TEXT,                           -- 마지막 실행 결과 요약
+  updated_at     TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS crawl_commands (
+  id           BIGSERIAL PRIMARY KEY,
+  source       TEXT NOT NULL,                    -- 수동 실행할 출처
+  status       TEXT NOT NULL DEFAULT 'pending',  -- pending|running|done|error
+  requested_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  started_at   TIMESTAMPTZ,
+  finished_at  TIMESTAMPTZ,
+  result       TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_crawl_commands_pending ON crawl_commands (status, requested_at);

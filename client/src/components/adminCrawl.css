@@ -1,0 +1,264 @@
+/* 관리자 메뉴(마스터 전용) — 채용 공고 상단 크롤링 제어 패널.
+   앱 전체 디자인(흰 카드 + rgba(0,0,0,0.1) 보더 + 액센트 #393b54)에 맞춘다. */
+.acp {
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  background: #fff;
+  border-radius: 14px;
+  margin-bottom: 18px;
+  overflow: hidden;
+}
+
+.acp-head {
+  width: 100%;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 16px 20px;
+  background: #fff;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+}
+.acp-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: #08060d;
+}
+.acp-sub {
+  font-size: 12px;
+  color: #717182;
+}
+.acp-caret {
+  margin-left: auto;
+  font-size: 10px;
+  color: #9a98a3;
+}
+
+.acp-body {
+  padding: 4px 12px 10px;
+  border-top: 1px solid rgba(0, 0, 0, 0.07);
+}
+
+.acp-error {
+  color: #c0392b;
+  font-size: 13px;
+  padding: 10px 8px;
+}
+.acp-loading {
+  color: #717182;
+  font-size: 13px;
+  padding: 12px 8px;
+}
+
+/* 6열 그리드: 사이트 / 상태 / 모드 / 주기 / 시각 / 수동 */
+.acp-row {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1.1fr 1.2fr 1.6fr 1fr;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 8px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  font-size: 13px;
+  position: relative;
+}
+.acp-row:last-child {
+  border-bottom: none;
+}
+.acp-colhead {
+  font-size: 11px;
+  color: #9a98a3;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+.acp-dim {
+  opacity: 0.5;
+}
+
+/* 칩: 색 배경+흰 글씨 → 흰 배경+색 테두리+색 글씨 */
+.acp-chip {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 11px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+  background: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.acp-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.acp-tag {
+  font-size: 10px;
+  color: #8a6d00;
+  background: #fbf3da;
+  border: 1px solid #f0e2b8;
+  border-radius: 6px;
+  padding: 1px 5px;
+}
+
+/* 활성/비활성 토글 스위치 */
+.acp-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  color: #717182;
+  font-size: 12px;
+  user-select: none;
+}
+.acp-toggle input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.acp-track {
+  position: relative;
+  width: 36px;
+  height: 20px;
+  border-radius: 999px;
+  background: #e0dfe3;
+  transition: background 0.15s ease;
+  flex-shrink: 0;
+}
+.acp-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  transition: transform 0.15s ease;
+}
+.acp-toggle input:checked + .acp-track {
+  background: #393b54;
+}
+.acp-toggle input:checked + .acp-track .acp-thumb {
+  transform: translateX(16px);
+}
+.acp-toggle input:disabled + .acp-track {
+  opacity: 0.45;
+}
+.acp-toggle input:focus-visible + .acp-track {
+  box-shadow: 0 0 0 3px rgba(57, 59, 84, 0.25);
+}
+.acp-toggle-label {
+  min-width: 30px;
+}
+
+/* 자동/수동 세그먼트 */
+.acp-mode {
+  display: inline-flex;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 999px;
+  padding: 2px;
+  background: #fff;
+  width: fit-content;
+  gap: 2px;
+}
+.acp-mode button {
+  border: none;
+  background: transparent;
+  padding: 5px 13px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  color: #717182;
+  border-radius: 999px;
+  font-family: inherit;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+.acp-mode button.on {
+  background: #393b54;
+  color: #fff;
+}
+.acp-mode button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* 주기(시간) */
+.acp-interval {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #717182;
+  font-size: 12px;
+}
+.acp-interval input {
+  width: 58px;
+  padding: 6px 9px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  background: #fff;
+  font: inherit;
+  font-size: 13px;
+  text-align: right;
+  color: #0a0a0a;
+}
+.acp-interval input:focus {
+  outline: none;
+  border-color: var(--accent-border, rgba(57, 59, 84, 0.5));
+}
+.acp-interval input:disabled {
+  background: #f3f3f5;
+  color: #adabb5;
+}
+
+.acp-times {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 11.5px;
+  color: #9a98a3;
+}
+
+/* 수동 실행 — 아웃라인 버튼(앱의 tr-btn-outline 톤) */
+.acp-run {
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  background: #fff;
+  color: #393b54;
+  font-weight: 600;
+  font-size: 12px;
+  padding: 7px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  font-family: inherit;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+.acp-run:hover:not(:disabled) {
+  background: #393b54;
+  color: #fff;
+  border-color: #393b54;
+}
+.acp-run:disabled {
+  color: #adabb5;
+  cursor: not-allowed;
+}
+
+.acp-note {
+  grid-column: 1 / -1;
+  font-size: 11.5px;
+  color: #393b54;
+  padding: 2px 2px 0;
+}
+
+@media (max-width: 760px) {
+  .acp-row {
+    grid-template-columns: 1fr 1fr;
+    row-gap: 8px;
+  }
+  .acp-colhead {
+    display: none;
+  }
+}

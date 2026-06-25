@@ -9,6 +9,7 @@ import type { HealthResponse } from "@e-lifethon/shared";
 import { initDb } from "./db.js";
 import { authRoutes } from "./auth.js";
 import { jobRoutes } from "./jobs.js";
+import { adminRoutes } from "./admin.js";
 
 const app = Fastify({ logger: true });
 
@@ -21,6 +22,7 @@ app.get("/health", async (): Promise<HealthResponse> => ({ ok: true }));
 await initDb();
 await app.register(authRoutes);
 await app.register(jobRoutes);
+await app.register(adminRoutes);
 
 // 프로덕션: 빌드된 client(client/dist)를 같은 서버에서 정적 서빙 + SPA fallback.
 // 개발 중에는 client/dist 가 없으므로 건너뛰고, Vite 개발 서버(:5173)가 화면을 담당한다.
