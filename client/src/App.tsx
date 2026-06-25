@@ -5,6 +5,8 @@ import { me } from "./api";
 import { Login } from "./pages/Login";
 import { Signup } from "./pages/Signup";
 import { Home } from "./pages/Home";
+import { Jobs } from "./pages/Jobs";
+import { JobDetail } from "./pages/JobDetail";
 import { ComingSoon } from "./pages/ComingSoon";
 
 export function App() {
@@ -45,6 +47,18 @@ export function App() {
         path="/"
         element={authed((u) => (
           <Home user={u} onUser={setUser} onLogout={() => setUser(null)} />
+        ))}
+      />
+      <Route
+        path="/jobs"
+        element={authed((u) => (
+          <Jobs user={u} onUser={setUser} onLogout={() => setUser(null)} />
+        ))}
+      />
+      <Route
+        path="/jobs/:id"
+        element={authed((u) => (
+          <JobDetail user={u} onUser={setUser} onLogout={() => setUser(null)} />
         ))}
       />
       <Route

@@ -48,3 +48,37 @@ export interface AuthError {
   ok: false;
   error: string;
 }
+
+// ── 채용 공고(크롤러가 채우는 job_postings 를 화면에 노출) ─────────────────
+export interface JobPosting {
+  id: number;
+  source: string; // 출처 키(칩 라벨용): saramin, wanted, …
+  source_url: string; // 원본 링크
+  title: string;
+  company: string | null;
+  location: string | null;
+  employment_type: string | null;
+  experience_level: string | null;
+  education: string | null;
+  salary: string | null;
+  job_categories: string[];
+  skills: string[];
+  posted_at: string | null;
+  deadline: string | null;
+  deadline_text: string | null;
+  qualifications: string | null;
+  preferred: string | null;
+  hiring_process: string | null;
+  documents: string | null;
+  benefits: string | null;
+  description: string | null;
+  detail_fetched: boolean; // true면 상세까지 수집(빈 항목=실제 없음), false면 미수집(unknown)
+  ai_summary: string | null; // 로컬 LLM이 정리한 마크다운 요약
+}
+
+export interface JobsResponse {
+  items: JobPosting[];
+  total: number;
+  sources: string[]; // 현재 DB에 존재하는 출처 목록(필터칩용)
+}
+

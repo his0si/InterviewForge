@@ -1,0 +1,23 @@
+# InterviewForge 크롤러 — 상시 스케줄러 컨테이너(매일 자동 크롤링).
+name: interviewforge-crawler
+
+services:
+  crawler:
+    build: .
+    container_name: interviewforge-crawler
+    restart: unless-stopped
+    # 호스트의 interviewforge Postgres 클러스터(5434)에 닿기 위한 통로.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - SARAMIN_API_KEY=${SARAMIN_API_KEY}
+      - KEYWORDS=${KEYWORDS:-개발자,백엔드,프론트엔드,데이터}
+      - CRAWL_HOUR=${CRAWL_HOUR:-5}
+      - CRAWL_MINUTE=${CRAWL_MINUTE:-0}
+      - MAX_PER_SOURCE=${MAX_PER_SOURCE:-300}
+      - TZ=${TZ:-Asia/Seoul}
+      # 로컬 LLM(Ollama) — 컨테이너에서 호스트의 11434 로 접속
+      - OLLAMA_URL=${OLLAMA_URL:-http://host.docker.internal:11434}
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-exaone3.5:latest}
+      - SUMMARY_LIMIT=${SUMMARY_LIMIT:-120}

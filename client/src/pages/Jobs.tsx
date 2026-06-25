@@ -1,0 +1,141 @@
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import type { JobPosting, PublicUser } from "@e-lifethon/shared";
+import { getJobs } from "../api";
+import AppShell from "../components/AppShell";
+import PageHeader from "../components/PageHeader";
+import { ExternalLinkIcon, RotateIcon, SearchIcon } from "../components/icons";
+import { jobRole, sourceMeta } from "./sourceMeta";
+import "../trends.css";
+
+function JobCard({ job }: { job: JobPosting }) {
+  const m = sourceMeta(job.source);
+  const role = jobRole(job.job_categories);
+  return (
+    <Link to={`/jobs/${job.id}`} className="tr-post">
+      <span className="job-src-pill" style={{ background: m.color }}>
+        {m.label}
+      </span>
+      <div className="tr-post-body">
+        <div className="tr-post-head">
+          <span className="tr-post-title">{job.title}</span>
+          <span className="tr-post-meta">
+            <span className="tr-date">
+              {job.deadline ? `~${job.deadline}` : job.deadline_text ?? ""}
+            </span>
+          </span>
+        </div>
+        <div className="job-meta-row">
+          {job.company && <b>{job.company}</b>}
+          {role && <span>{role}</span>}
+          {job.location && <span>{job.location}</span>}
+          {job.experience_level && <span>{job.experience_level}</span>}
+          {job.employment_type && <span>{job.employment_type}</span>}
+        </div>
+        {job.skills.length > 0 && (
+          <div className="job-tag-row">
+            {job.skills.slice(0, 10).map((s) => (
+              <span className="job-tag" key={s}>{s}</span>
+            ))}
+          </div>
+        )}
+      </div>
+      <span className="tr-post-ext" aria-hidden>
+        <ExternalLinkIcon size={16} />
+      </span>
+    </Link>
+  );
+}
+
+export function Jobs({
+  user,
+  onUser,
+  onLogout,
+}: {
+  user: PublicUser;
+  onUser: (u: PublicUser) => void;
+  onLogout: () => void;
+}) {
+  const [items, setItems] = useState<JobPosting[]>([]);
+  const [total, setTotal] = useState(0);
+  const [sources, setSources] = useState<string[]>([]);
+  const [source, setSource] = useState("");
+  const [q, setQ] = useState("");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    getJobs({ source: source || undefined, q: q || undefined, limit: 50 })
+      .then((res) => {
+        setItems(res.items);
+        setTotal(res.total);
+        if (res.sources.length) setSources(res.sources);
+      })
+      .finally(() => setLoading(false));
+  }, [source, q]);
+
+  return (
+    <AppShell user={user} onUser={onUser} onLogout={onLogout}>
+      <nav className="tr-crumbs" aria-label="경로">
+        <span className="tr-crumb">
+          <span className="current">채용 공고</span>
+        </span>
+      </nav>
+
+      <PageHeader title="채용 공고">여러 사이트의 공고를 한곳에서 — 카드를 누르면 상세, 상세에서 원본으로 이동합니다.</PageHeader>
+
+      <div className="tr-filterbar">
+        <button
+          type="button"
+          className={`tr-filter-pill${source === "" ? " active" : ""}`}
+          onClick={() => setSource("")}
+        >
+          전체
+        </button>
+        {sources.map((s) => (
+          <button
+            key={s}
+            type="button"
+            className={`tr-filter-pill${source === s ? " active" : ""}`}
+            onClick={() => setSource(s)}
+          >
+            {sourceMeta(s).label}
+          </button>
+        ))}
+        <div className="tr-filter-right">
+          <div className="tr-filter-search">
+            <SearchIcon />
+            <input
+              type="search"
+              placeholder="제목·회사 검색"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+            />
+          </div>
+          <button type="button" className="tr-reset" onClick={() => { setQ(""); setSource(""); }}>
+            <RotateIcon /> 초기화
+          </button>
+        </div>
+      </div>
+
+      <div className="tr-listbar">
+        <span className="tr-count">{loading ? "불러오는 중…" : `${total}건`}</span>
+        <button type="button" className="tr-sort">최신순</button>
+      </div>
+
+      {!loading && items.length === 0 ? (
+        <div className="tr-post-list">
+          <div style={{ padding: 40, textAlign: "center", color: "#888" }}>
+            아직 수집된 공고가 없습니다. 크롤러를 실행하면 채워집니다.
+          </div>
+        </div>
+      ) : (
+        <div className="tr-post-list">
+          {items.map((j) => (
+            <JobCard job={j} key={j.id} />
+          ))}
+        </div>
+      )}
+    </AppShell>
+  );
+}

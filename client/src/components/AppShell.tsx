@@ -10,6 +10,7 @@ import {
   HomeIcon,
   LogoutIcon,
   MenuIcon,
+  NewspaperIcon,
   NoteIcon,
   SettingsIcon,
   TrendIcon,
@@ -92,6 +93,10 @@ export default function AppShell({
           <NavLink to="/" end className="app-nav-item">
             <HomeIcon />
             <span>홈</span>
+          </NavLink>
+          <NavLink to="/jobs" className="app-nav-item">
+            <NewspaperIcon />
+            <span>채용 공고</span>
           </NavLink>
           <NavLink to="/practice" className="app-nav-item">
             <BotIcon />

@@ -1,6 +1,8 @@
 // 인증 API 호출 모음. 모두 같은 출처의 상대경로(/api/...)를 쓴다.
 // credentials: "include" 로 httpOnly 쿠키(if_token)를 주고받는다.
 import type {
+  JobPosting,
+  JobsResponse,
   LoginResponse,
   MeResponse,
   PublicUser,
@@ -69,4 +71,26 @@ export function changePassword(currentPassword: string, newPassword: string) {
     currentPassword,
     newPassword,
   });
+}
+
+// 채용 공고 목록(출처/검색 필터)
+export async function getJobs(opts: {
+  source?: string;
+  q?: string;
+  limit?: number;
+  offset?: number;
+} = {}): Promise<JobsResponse> {
+  const p = new URLSearchParams();
+  if (opts.source) p.set("source", opts.source);
+  if (opts.q) p.set("q", opts.q);
+  if (opts.limit != null) p.set("limit", String(opts.limit));
+  if (opts.offset != null) p.set("offset", String(opts.offset));
+  const res = await fetch(`/api/jobs?${p.toString()}`, { credentials: "include" });
+  return (await res.json()) as JobsResponse;
+}
+
+export async function getJob(id: string | number): Promise<JobPosting | null> {
+  const res = await fetch(`/api/jobs/${id}`, { credentials: "include" });
+  if (!res.ok) return null;
+  return (await res.json()) as JobPosting;
 }
