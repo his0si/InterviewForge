@@ -1,0 +1,551 @@
+/* ===== 인증 화면(로그인/회원가입) =====
+   좌측: 비주얼 카드 / 우측: 폼 카드 — hansolax/server 의 "로그인/회원가입 Desktop" 디자인을
+   그대로 가져와 InterviewForge 브랜딩(워드마크/태그라인/그라데이션)만 교체했다.
+   라이트 고정 디자인. 토큰: primary #393b54 · input bg #f5f5f9 · placeholder #7d7d8a · 텍스트 #0a0a0a */
+
+.auth {
+  display: flex;
+  gap: 20px;
+  align-items: stretch;
+  min-height: 100svh;
+  padding: 20px;
+  box-sizing: border-box;
+  background: #fff;
+  text-align: left;
+}
+
+/* ---- 좌측 비주얼 ---- */
+.auth-visual {
+  position: relative;
+  flex: 0 0 52%;
+  border-radius: 24px;
+  overflow: hidden;
+  /* 원본은 주방 사진. InterviewForge 는 면접/집중을 연상시키는 딥 그라데이션으로 대체. */
+  background:
+    radial-gradient(120% 120% at 0% 0%, #4a3d6b 0%, rgba(74, 61, 107, 0) 55%),
+    radial-gradient(120% 120% at 100% 100%, #2a3b66 0%, rgba(42, 59, 102, 0) 55%),
+    #16171d;
+}
+
+.auth-photo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* 하단으로 갈수록 어두워지는 그라데이션 — 태그라인 가독성 확보 */
+.auth-visual::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0) 45%, rgba(0, 0, 0, 0.35));
+}
+
+/* 좌상단 워드마크(원본의 로고 이미지 자리) */
+.auth-logo {
+  position: absolute;
+  top: 40px;
+  left: 40px;
+  z-index: 1;
+  margin: 0;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 700;
+  font-size: 26px;
+  letter-spacing: -0.5px;
+  color: #fff;
+}
+
+.auth-logo .dot {
+  color: #b69cff;
+}
+
+.auth-tagline {
+  position: absolute;
+  left: 40px;
+  bottom: 56px;
+  right: 40px;
+  z-index: 1;
+}
+
+.auth-tagline h2 {
+  margin: 0;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 600;
+  font-size: 60px;
+  line-height: 72px;
+  letter-spacing: -1.2px;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.auth-tagline-sub {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 9px;
+}
+
+.auth-tagline-sub .rule {
+  width: 321px;
+  max-width: 50%;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.auth-tagline-sub span {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 300;
+  font-size: 24px;
+  line-height: 30px;
+  letter-spacing: -0.24px;
+  color: rgba(255, 255, 255, 0.9);
+  white-space: nowrap;
+}
+
+/* ---- 우측 폼 ---- */
+.auth-form-card {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  border-radius: 24px;
+}
+
+.auth-form {
+  width: 100%;
+  max-width: 542px;
+  padding: 28px 24px;
+  box-sizing: border-box;
+}
+
+.auth-form h1 {
+  margin: 0 0 24px;
+  font-family: 'Pretendard Variable', Pretendard, system-ui, sans-serif;
+  font-weight: 500;
+  font-size: 28px;
+  line-height: 38px;
+  letter-spacing: -0.32px;
+  color: #0a0a0a;
+  text-align: center;
+}
+
+.auth-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.auth-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.auth-field > label {
+  padding: 0 4px;
+  font-family: 'Inter', sans-serif;
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.6px;
+  color: rgba(10, 10, 10, 0.7);
+}
+
+/* 한 줄에 이메일+인증버튼 */
+.auth-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+}
+
+.auth-row .auth-field {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.auth-input,
+.auth-select {
+  width: 100%;
+  height: 46px;
+  box-sizing: border-box;
+  background: #f5f5f9;
+  border: none;
+  border-radius: 10px;
+  padding: 0 18px;
+  font-family: 'Pretendard Variable', Pretendard, system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 24px;
+  color: #0a0a0a;
+}
+
+.auth-input::placeholder {
+  color: #7d7d8a;
+}
+
+.auth-input:focus-visible,
+.auth-select:focus-visible {
+  outline: 2px solid #393b54;
+  outline-offset: 1px;
+}
+
+/* 자동완성 시 회색/노란 배경 제거 */
+.auth-input:-webkit-autofill,
+.auth-input:-webkit-autofill:hover,
+.auth-input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #0a0a0a;
+  -webkit-box-shadow: 0 0 0 1000px #f5f5f9 inset;
+  caret-color: #0a0a0a;
+  transition: background-color 9999s ease-out 0s;
+}
+
+/* 이메일 옆 "인증 요청" 버튼 */
+.auth-inline-btn {
+  flex-shrink: 0;
+  height: 46px;
+  padding: 0 16px;
+  border: 1.2px solid #393b54;
+  border-radius: 10px;
+  background: #fff;
+  color: #393b54;
+  font-family: 'Pretendard Variable', Pretendard, system-ui, sans-serif;
+  font-weight: 500;
+  font-size: 15px;
+  line-height: 24px;
+  letter-spacing: -0.108px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.auth-inline-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* 직무(동적 추가) — 행마다 입력 + 삭제 버튼, 아래에 추가 버튼 */
+.auth-job-remove {
+  padding: 0 18px;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.auth-add-btn {
+  align-self: flex-start;
+  margin-top: 2px;
+  padding: 4px 4px;
+  border: none;
+  background: none;
+  color: #393b54;
+  font-family: 'Pretendard Variable', Pretendard, system-ui, sans-serif;
+  font-weight: 500;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.auth-add-btn:hover {
+  text-decoration: underline;
+}
+
+.auth-add-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  text-decoration: none;
+}
+
+/* "아이디 저장" 체크 */
+.auth-remember {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.auth-remember input {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  border: 1px solid #e5e5e5;
+  border-radius: 2px;
+  background: transparent;
+  cursor: pointer;
+  display: inline-grid;
+  place-content: center;
+}
+
+.auth-remember input:checked {
+  background: #393b54;
+  border-color: #393b54;
+}
+
+.auth-remember input:checked::after {
+  content: '';
+  width: 5px;
+  height: 9px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg) translateY(-1px);
+}
+
+.auth-remember span {
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.6px;
+  color: rgba(10, 10, 10, 0.7);
+}
+
+/* ---- 버튼 ---- */
+.auth-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.auth-btn {
+  height: 48px;
+  border-radius: 10px;
+  font-family: 'Pretendard Variable', Pretendard, system-ui, sans-serif;
+  font-weight: 500;
+  font-size: 17px;
+  line-height: 24px;
+  cursor: pointer;
+  transition: filter 0.15s, background 0.15s, color 0.15s;
+}
+
+.auth-btn-primary {
+  border: none;
+  background: #393b54;
+  color: #fff;
+}
+
+.auth-btn-primary:hover {
+  filter: brightness(1.08);
+}
+
+.auth-btn-outline {
+  border: 1.2px solid #393b54;
+  background: #fff;
+  color: #393b54;
+}
+
+.auth-btn-outline:hover {
+  background: rgba(57, 59, 84, 0.06);
+}
+
+.auth-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ---- 안내 메시지 ---- */
+.auth-msg {
+  font-family: 'Pretendard Variable', Pretendard, system-ui, sans-serif;
+  font-size: 15px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  margin-bottom: 20px;
+}
+
+.auth-msg.error {
+  background: rgba(220, 38, 38, 0.1);
+  color: #b91c1c;
+}
+
+.auth-msg.ok {
+  background: rgba(22, 101, 52, 0.1);
+  color: #15803d;
+}
+
+/* ---- 반응형 ---- */
+@media (max-width: 1180px) {
+  .auth-tagline h2 {
+    font-size: 44px;
+    line-height: 54px;
+  }
+  .auth-tagline-sub span {
+    font-size: 20px;
+  }
+}
+
+@media (max-width: 860px) {
+  .auth {
+    flex-direction: column;
+    padding: 12px;
+    gap: 12px;
+  }
+  .auth-visual {
+    flex: 0 0 220px;
+  }
+  .auth-logo {
+    top: 24px;
+    left: 24px;
+    font-size: 22px;
+  }
+  .auth-tagline {
+    left: 24px;
+    right: 24px;
+    bottom: 28px;
+  }
+  .auth-tagline h2 {
+    font-size: 30px;
+    line-height: 38px;
+    letter-spacing: -0.6px;
+  }
+  .auth-tagline-sub {
+    margin-top: 4px;
+  }
+  .auth-tagline-sub span {
+    font-size: 15px;
+  }
+  .auth-form {
+    padding: 24px 20px 40px;
+  }
+  .auth-form h1 {
+    margin-bottom: 32px;
+    font-size: 28px;
+  }
+}
+
+/* ---- 모바일(≤600px) — 풀블리드 배너 + 그 위로 24px 겹쳐 올라오는 폼 카드 ---- */
+@media (max-width: 600px) {
+  .auth {
+    flex-direction: column;
+    padding: 0;
+    gap: 0;
+  }
+  .auth-visual {
+    flex: 0 0 270px;
+    border-radius: 0;
+  }
+  .auth-visual::after {
+    background: linear-gradient(to bottom, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.5) 60%);
+  }
+  .auth-logo {
+    top: 19px;
+    left: 17px;
+    font-size: 18px;
+  }
+  .auth-tagline {
+    left: 21px;
+    right: 21px;
+    top: 127px;
+    bottom: auto;
+  }
+  .auth-tagline h2 {
+    font-size: 24px;
+    line-height: 35px;
+    letter-spacing: -0.48px;
+  }
+  .auth-tagline-sub {
+    margin-top: 6px;
+  }
+  .auth-tagline-sub .rule {
+    width: 116px;
+    max-width: 40%;
+  }
+  .auth-tagline-sub span {
+    font-size: 12px;
+    line-height: 14px;
+    letter-spacing: -0.12px;
+  }
+  .auth-form-card {
+    margin-top: -24px;
+    align-items: flex-start;
+    border-radius: 24px 24px 0 0;
+    box-shadow: 0 1px 3px rgba(57, 59, 84, 0.1), 0 1px 2px rgba(57, 59, 84, 0.1);
+    z-index: 1;
+  }
+  .auth-form {
+    max-width: 360px;
+    padding: 48px 32px 60px;
+  }
+  .auth-form h1 {
+    margin-bottom: 36px;
+    font-size: 18px;
+    line-height: 26px;
+    font-weight: 700;
+  }
+  .auth-input,
+  .auth-select {
+    min-width: 0;
+  }
+  .auth-field > label,
+  .auth-remember span,
+  .auth-msg {
+    overflow-wrap: anywhere;
+  }
+  .auth-fields {
+    gap: 18px;
+    margin-bottom: 32px;
+  }
+  .auth-field {
+    gap: 6px;
+  }
+  .auth-field > label {
+    font-size: 12px;
+    line-height: 18px;
+    letter-spacing: 0;
+  }
+  .auth-input,
+  .auth-select {
+    height: 36px;
+    border-radius: 6px;
+    padding: 0 10px;
+    font-size: 14px;
+    line-height: 24px;
+  }
+  .auth-inline-btn {
+    height: 36px;
+    border-radius: 6px;
+    padding: 0 12px;
+    font-size: 13px;
+    line-height: 24px;
+  }
+  .auth-remember span {
+    font-size: 12px;
+    line-height: 18px;
+    letter-spacing: 0;
+  }
+  .auth-actions {
+    gap: 10px;
+  }
+  .auth-btn {
+    height: 36px;
+    border-radius: 6px;
+    font-size: 14px;
+    line-height: 24px;
+  }
+  .auth-msg {
+    font-size: 13px;
+    margin-bottom: 16px;
+  }
+}
+
+/* ---- 초소형(≤480px) ---- */
+@media (max-width: 480px) {
+  .auth-visual {
+    flex: 0 0 220px;
+  }
+  .auth-form {
+    padding: 40px 20px 48px;
+  }
+  .auth-field > .auth-row {
+    flex-wrap: wrap;
+  }
+  .auth-field > .auth-row .auth-input {
+    flex: 1 1 100%;
+  }
+  .auth-field > .auth-row .auth-inline-btn {
+    flex: 1 1 100%;
+    width: 100%;
+  }
+  .auth-btn {
+    height: 44px;
+  }
+}

@@ -9,8 +9,19 @@ services:
     build: .
     container_name: interviewforge
     restart: unless-stopped
+    # 컨테이너에서 호스트의 interviewforge Postgres 클러스터(5434)에 닿기 위한 통로.
+    # DATABASE_URL 의 host.docker.internal 이 호스트 게이트웨이(172.17.0.1)로 해석된다.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    # docker compose 가 같은 폴더의 .env 를 읽어 ${...} 를 채운다.
     environment:
       - NODE_ENV=production
       - PORT=8787
+      - APP_URL=${APP_URL}
+      - DATABASE_URL=${DATABASE_URL}
+      - JWT_SECRET=${JWT_SECRET}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASS=${SMTP_PASS}
+      - SMTP_FROM=${SMTP_FROM}
     ports:
       - "127.0.0.1:8110:8787"

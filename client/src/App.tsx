@@ -1,28 +1,79 @@
-import { useState } from "react";
-import type { HealthResponse } from "@e-lifethon/shared";
+import { useEffect, useState } from "react";
+import { Navigate, Route, Routes } from "react-router-dom";
+import type { PublicUser } from "@e-lifethon/shared";
+import { me } from "./api";
+import { Login } from "./pages/Login";
+import { Signup } from "./pages/Signup";
+import { Home } from "./pages/Home";
+import { ComingSoon } from "./pages/ComingSoon";
 
-// API는 항상 같은 출처의 상대경로로 호출한다.
-//  - 개발: Vite 프록시(vite.config.ts)가 /health 를 백엔드(:8787)로 넘긴다.
-//  - 프로덕션: 같은 컨테이너의 Fastify가 정적파일과 API를 같이 서빙한다.
 export function App() {
-  const [status, setStatus] = useState<string>("");
+  const [user, setUser] = useState<PublicUser | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  async function checkServer() {
-    try {
-      const res = await fetch("/health");
-      const data: HealthResponse = await res.json();
-      setStatus(data.ok ? "서버 연결 OK ✅" : "서버 응답 이상");
-    } catch {
-      setStatus("서버에 연결할 수 없습니다 ❌");
-    }
+  // 새로고침해도 로그인 상태를 복원한다(쿠키 기반).
+  useEffect(() => {
+    me()
+      .then((res) => setUser(res.user))
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) {
+    return (
+      <div
+        style={{
+          minHeight: "100svh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          color: "rgba(10,10,10,0.5)",
+          fontFamily: "'Pretendard Variable', Pretendard, system-ui, sans-serif",
+        }}
+      >
+        불러오는 중…
+      </div>
+    );
   }
 
+  // 로그인이 필요한 화면 공통 래퍼
+  const authed = (node: (u: PublicUser) => React.ReactNode) =>
+    user ? node(user) : <Navigate to="/login" replace />;
+
   return (
-    <div style={{ fontFamily: "system-ui, sans-serif", padding: 40 }}>
-      <h1>InterviewForge</h1>
-      <p>Vite + React + TypeScript 기본 세팅.</p>
-      <button onClick={checkServer}>서버 연결 확인</button>
-      {status && <p>{status}</p>}
-    </div>
+    <Routes>
+      <Route
+        path="/"
+        element={authed((u) => (
+          <Home user={u} onUser={setUser} onLogout={() => setUser(null)} />
+        ))}
+      />
+      <Route
+        path="/practice"
+        element={authed((u) => (
+          <ComingSoon title="면접 연습" user={u} onUser={setUser} onLogout={() => setUser(null)} />
+        ))}
+      />
+      <Route
+        path="/history"
+        element={authed((u) => (
+          <ComingSoon title="면접 기록" user={u} onUser={setUser} onLogout={() => setUser(null)} />
+        ))}
+      />
+      <Route
+        path="/feedback"
+        element={authed((u) => (
+          <ComingSoon title="AI 피드백" user={u} onUser={setUser} onLogout={() => setUser(null)} />
+        ))}
+      />
+      <Route
+        path="/login"
+        element={user ? <Navigate to="/" replace /> : <Login onLogin={setUser} />}
+      />
+      <Route
+        path="/signup"
+        element={user ? <Navigate to="/" replace /> : <Signup />}
+      />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 }
