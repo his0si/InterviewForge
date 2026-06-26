@@ -88,6 +88,16 @@ export function NoteIcon({ size = 16 }: IconProps) {
   )
 }
 
+// 이력서 피드백: 문서 + 체크(검토/평가) 느낌.
+export function ResumeIcon({ size = 16 }: IconProps) {
+  return (
+    <svg {...base(size)}>
+      <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8zM14 3v5h5" />
+      <path d="M9 12.5l1.5 1.5L13 11M9 17h5" />
+    </svg>
+  )
+}
+
 export function SettingsIcon({ size = 16 }: IconProps) {
   return (
     <svg {...base(size)}>
@@ -210,6 +220,50 @@ export function SendIcon({ size = 16 }: IconProps) {
   return (
     <svg {...base(size)}>
       <path d="M12 19V5M5 12l7-7 7 7" />
+    </svg>
+  )
+}
+
+export function PlayIcon({ size = 16 }: IconProps) {
+  return (
+    <svg {...base(size)} fill="currentColor" stroke="none">
+      <path d="M8 5v14l11-7z" />
+    </svg>
+  )
+}
+
+export function FilmIcon({ size = 16 }: IconProps) {
+  return (
+    <svg {...base(size)}>
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <path d="M7 4v16M17 4v16M3 9h4M17 9h4M3 15h4M17 15h4" />
+    </svg>
+  )
+}
+
+export function CameraIcon({ size = 16 }: IconProps) {
+  return (
+    <svg {...base(size)}>
+      <path d="M23 7l-7 5 7 5V7z" />
+      <rect x="1" y="5" width="15" height="14" rx="2" />
+    </svg>
+  )
+}
+
+export function CameraOffIcon({ size = 16 }: IconProps) {
+  return (
+    <svg {...base(size)}>
+      <path d="M16 16v2a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h2m4 0h5a2 2 0 0 1 2 2v3l4-3v8" />
+      <path d="M1 1l22 22" />
+    </svg>
+  )
+}
+
+export function TrashIcon({ size = 16 }: IconProps) {
+  return (
+    <svg {...base(size)}>
+      <path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6" />
+      <path d="M10 11v6M14 11v6" />
     </svg>
   )
 }

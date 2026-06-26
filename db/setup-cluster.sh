@@ -68,6 +68,9 @@ else
   su - postgres -c "psql -p ${PORT} -c \"CREATE DATABASE interviewforge OWNER interviewforge;\""
 fi
 
+echo "==> pgvector 확장 생성(공고 추천 의미검색용 — 슈퍼유저 권한 필요)"
+su - postgres -c "psql -p ${PORT} -d interviewforge -c \"CREATE EXTENSION IF NOT EXISTS vector;\""
+
 echo
 echo "완료 ✅  포트 ${PORT} 에 ${CLUSTER} 클러스터 + interviewforge DB 준비됨."
 echo "    앱:     postgresql://interviewforge:${DB_PASS}@host.docker.internal:${PORT}/interviewforge"

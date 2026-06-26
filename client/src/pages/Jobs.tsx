@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import type { JobPosting, PublicUser } from "@e-lifethon/shared";
-import { getJobs } from "../api";
+import { getJobs, getRecommendedJobs } from "../api";
 import AppShell from "../components/AppShell";
 import AdminCrawlPanel from "../components/AdminCrawlPanel";
 import PageHeader from "../components/PageHeader";
 import { ExternalLinkIcon, RotateIcon, SearchIcon } from "../components/icons";
 import { jobRole, sourceMeta } from "./sourceMeta";
+import { formatDeadline } from "../format";
 import "../trends.css";
 
 function JobCard({ job }: { job: JobPosting }) {
@@ -22,7 +23,7 @@ function JobCard({ job }: { job: JobPosting }) {
           <span className="tr-post-title">{job.title}</span>
           <span className="tr-post-meta">
             <span className="tr-date">
-              {job.deadline ? `~${job.deadline}` : job.deadline_text ?? ""}
+              {job.deadline ? `~${formatDeadline(job.deadline)}` : job.deadline_text ?? ""}
             </span>
           </span>
         </div>
@@ -62,10 +63,37 @@ export function Jobs({
   const [sources, setSources] = useState<string[]>([]);
   const [source, setSource] = useState("");
   const [q, setQ] = useState("");
+  const [sort, setSort] = useState<"latest" | "recommended">("latest");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     setLoading(true);
+
+    if (sort === "recommended") {
+      // 추천순: 직무 + 이력서 기반 의미검색 결과를 받아온 뒤,
+      // 현재 선택된 출처·검색어로 클라이언트에서 한 번 더 거른다.
+      getRecommendedJobs(50)
+        .then((res) => {
+          const needle = q.trim().toLowerCase();
+          const filtered = res.items.filter((j) => {
+            if (source && j.source !== source) return false;
+            if (needle) {
+              const hay = `${j.title} ${j.company ?? ""}`.toLowerCase();
+              if (!hay.includes(needle)) return false;
+            }
+            return true;
+          });
+          setItems(filtered);
+          setTotal(filtered.length);
+        })
+        .catch(() => {
+          setItems([]);
+          setTotal(0);
+        })
+        .finally(() => setLoading(false));
+      return;
+    }
+
     getJobs({ source: source || undefined, q: q || undefined, limit: 50 })
       .then((res) => {
         setItems(res.items);
@@ -73,7 +101,7 @@ export function Jobs({
         if (res.sources.length) setSources(res.sources);
       })
       .finally(() => setLoading(false));
-  }, [source, q]);
+  }, [source, q, sort]);
 
   return (
     <AppShell user={user} onUser={onUser} onLogout={onLogout}>
@@ -123,7 +151,14 @@ export function Jobs({
 
       <div className="tr-listbar">
         <span className="tr-count">{loading ? "불러오는 중…" : `${total}건`}</span>
-        <button type="button" className="tr-sort">최신순</button>
+        <button
+          type="button"
+          className="tr-sort"
+          onClick={() => setSort((s) => (s === "latest" ? "recommended" : "latest"))}
+          title="정렬 순서 바꾸기"
+        >
+          {sort === "latest" ? "최신순" : "추천순"}
+        </button>
       </div>
 
       {!loading && items.length === 0 ? (

@@ -85,6 +85,73 @@ export async function initDb(): Promise<void> {
     `CREATE INDEX IF NOT EXISTS idx_crawl_commands_pending ON crawl_commands(status, requested_at);`
   );
 
+  // ── 면접 연습 녹화(면접 기록) ────────────────────────────────────────────
+  // 면접 연습 화면에서 녹화한 영상(webm)과 실시간 변환 자막을 사용자별로 보관한다.
+  // 영상 바이트는 BYTEA 로 DB 에 직접 저장한다(요청: 모든 데이터를 DB 에).
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS interview_recordings (
+      id            SERIAL PRIMARY KEY,
+      user_id       INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      title         TEXT NOT NULL DEFAULT '',
+      transcript    TEXT NOT NULL DEFAULT '',   -- 음성→텍스트 변환 결과(말한 내용 전체)
+      duration_sec  INTEGER NOT NULL DEFAULT 0, -- 녹화 길이(초)
+      mime_type     TEXT NOT NULL DEFAULT 'video/webm',
+      size_bytes    INTEGER NOT NULL DEFAULT 0,
+      video         BYTEA NOT NULL,             -- 영상 원본 바이트
+      created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+  `);
+  await pool.query(
+    `CREATE INDEX IF NOT EXISTS idx_recordings_user ON interview_recordings(user_id, created_at DESC);`
+  );
+
+  // ── 이력서 피드백: 업로드한 이력서 PDF 보관 ───────────────────────────────
+  // 사용자가 올린 이력서(PDF)를 DB(BYTEA)에 저장한다. (AI 피드백은 추후 추가)
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS resumes (
+      id            SERIAL PRIMARY KEY,
+      user_id       INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      filename      TEXT NOT NULL DEFAULT 'resume.pdf',
+      mime_type     TEXT NOT NULL DEFAULT 'application/pdf',
+      size_bytes    INTEGER NOT NULL DEFAULT 0,
+      file          BYTEA NOT NULL,            -- 이력서 PDF 원본 바이트
+      extracted_text TEXT,                     -- PDF 에서 추출한 원문 텍스트(분석/피드백 입력)
+      feedback      TEXT,                      -- 추후 AI 피드백 결과(현재는 NULL)
+      created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+  `);
+  // 기존 DB 마이그레이션: PDF 원문 텍스트 + 로컬 LLM 분석 컬럼 추가
+  await pool.query(`ALTER TABLE resumes ADD COLUMN IF NOT EXISTS extracted_text TEXT;`);
+  await pool.query(`ALTER TABLE resumes ADD COLUMN IF NOT EXISTS analysis JSONB;`);
+  await pool.query(
+    `ALTER TABLE resumes ADD COLUMN IF NOT EXISTS analysis_status TEXT NOT NULL DEFAULT 'pending';`
+  );
+  await pool.query(`ALTER TABLE resumes ADD COLUMN IF NOT EXISTS analyzed_at TIMESTAMPTZ;`);
+  await pool.query(
+    `CREATE INDEX IF NOT EXISTS idx_resumes_user ON resumes(user_id, created_at DESC);`
+  );
+
+  // ── 채용 공고 임베딩(추천용) ──────────────────────────────────────────────
+  // job_postings 는 크롤러가 만든다. 테이블이 있을 때만 pgvector 컬럼을 보강한다.
+  // (vector 확장은 슈퍼유저가 1회 생성해야 함: setup-cluster.sh / db/02_schema.sql 참고)
+  try {
+    const hasVector = await pool.query(
+      `SELECT 1 FROM pg_extension WHERE extname = 'vector'`
+    );
+    const hasJobs = await pool.query(`SELECT to_regclass('public.job_postings') AS t`);
+    if (hasVector.rowCount && hasJobs.rows[0].t) {
+      await pool.query(`ALTER TABLE job_postings ADD COLUMN IF NOT EXISTS embedding vector(1024);`);
+      await pool.query(`ALTER TABLE job_postings ADD COLUMN IF NOT EXISTS embedding_at TIMESTAMPTZ;`);
+      // 코사인 거리 ANN 인덱스(대량일 때 추천 정렬 가속). 이미 있으면 무시.
+      await pool.query(
+        `CREATE INDEX IF NOT EXISTS idx_job_postings_embedding
+           ON job_postings USING hnsw (embedding vector_cosine_ops);`
+      );
+    }
+  } catch (err) {
+    console.warn("job_postings 임베딩 컬럼 준비 건너뜀:", (err as Error).message);
+  }
+
   // 알려진 출처를 시드(이미 있으면 라벨/구현여부만 최신화, 사용자 설정은 보존).
   for (const s of KNOWN_SOURCES) {
     await pool.query(

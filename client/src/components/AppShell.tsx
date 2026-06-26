@@ -12,8 +12,8 @@ import {
   MenuIcon,
   NewspaperIcon,
   NoteIcon,
+  ResumeIcon,
   SettingsIcon,
-  TrendIcon,
   UserIcon,
 } from "./icons";
 import "./app.css";
@@ -98,6 +98,10 @@ export default function AppShell({
             <NewspaperIcon />
             <span>채용 공고</span>
           </NavLink>
+          <NavLink to="/resume" className="app-nav-item">
+            <ResumeIcon />
+            <span>이력서 피드백</span>
+          </NavLink>
           <NavLink to="/practice" className="app-nav-item">
             <BotIcon />
             <span>면접 연습</span>
@@ -105,10 +109,6 @@ export default function AppShell({
           <NavLink to="/history" className="app-nav-item">
             <NoteIcon />
             <span>면접 기록</span>
-          </NavLink>
-          <NavLink to="/feedback" className="app-nav-item">
-            <TrendIcon />
-            <span>AI 피드백</span>
           </NavLink>
         </nav>
 
