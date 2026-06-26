@@ -23,5 +23,9 @@ services:
       - SMTP_USER=${SMTP_USER}
       - SMTP_PASS=${SMTP_PASS}
       - SMTP_FROM=${SMTP_FROM}
+      # 로컬 LLM(Ollama) — 컨테이너에서 호스트(host.docker.internal:11434)로
+      - OLLAMA_URL=${OLLAMA_URL:-http://host.docker.internal:11434}
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-exaone3.5:latest}
+      - OLLAMA_EMBED_MODEL=${OLLAMA_EMBED_MODEL:-bge-m3:latest}
     ports:
       - "127.0.0.1:8110:8787"

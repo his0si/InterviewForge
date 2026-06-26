@@ -7,7 +7,9 @@ import { Signup } from "./pages/Signup";
 import { Home } from "./pages/Home";
 import { Jobs } from "./pages/Jobs";
 import { JobDetail } from "./pages/JobDetail";
-import { ComingSoon } from "./pages/ComingSoon";
+import { Practice } from "./pages/Practice";
+import { History } from "./pages/History";
+import { ResumeFeedback } from "./pages/ResumeFeedback";
 
 export function App() {
   const [user, setUser] = useState<PublicUser | null>(null);
@@ -62,23 +64,25 @@ export function App() {
         ))}
       />
       <Route
+        path="/resume"
+        element={authed((u) => (
+          <ResumeFeedback user={u} onUser={setUser} onLogout={() => setUser(null)} />
+        ))}
+      />
+      <Route
         path="/practice"
         element={authed((u) => (
-          <ComingSoon title="면접 연습" user={u} onUser={setUser} onLogout={() => setUser(null)} />
+          <Practice user={u} onUser={setUser} onLogout={() => setUser(null)} />
         ))}
       />
       <Route
         path="/history"
         element={authed((u) => (
-          <ComingSoon title="면접 기록" user={u} onUser={setUser} onLogout={() => setUser(null)} />
+          <History user={u} onUser={setUser} onLogout={() => setUser(null)} />
         ))}
       />
-      <Route
-        path="/feedback"
-        element={authed((u) => (
-          <ComingSoon title="AI 피드백" user={u} onUser={setUser} onLogout={() => setUser(null)} />
-        ))}
-      />
+      {/* 옛 경로 호환: /feedback → /resume */}
+      <Route path="/feedback" element={<Navigate to="/resume" replace />} />
       <Route
         path="/login"
         element={user ? <Navigate to="/" replace /> : <Login onLogin={setUser} />}

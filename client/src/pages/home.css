@@ -1,0 +1,112 @@
+/* 홈 대시보드 전용 스타일. dash-* / pr-* 토큰과 함께 쓰인다. */
+
+/* 바로가기 타일 4개 */
+.home-tiles {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-top: 20px;
+}
+@media (max-width: 900px) {
+  .home-tiles { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 520px) {
+  .home-tiles { grid-template-columns: 1fr; }
+}
+
+.home-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 14px;
+  text-decoration: none;
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+}
+.home-tile:hover {
+  border-color: var(--accent-border);
+  box-shadow: 0 6px 20px rgba(57, 59, 84, 0.08);
+  transform: translateY(-1px);
+}
+.home-tile-icon {
+  display: grid;
+  place-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+.home-tile-body { display: flex; flex-direction: column; gap: 3px; }
+.home-tile-label { font-size: 15px; font-weight: 600; color: var(--text-h); }
+.home-tile-desc { font-size: 12.5px; color: var(--text); }
+.home-tile-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-top: 2px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--accent);
+}
+
+/* 카드 내부 보조 텍스트 */
+.home-sub {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-h);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.home-link { text-decoration: none; }
+.home-link:hover { text-decoration: underline; }
+
+/* 맞춤 추천 공고 */
+.dash-card-head h2 { display: inline-flex; align-items: center; gap: 6px; }
+.home-rec-roles {
+  margin-left: 6px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--text);
+}
+.home-rec-match {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--accent-bg);
+  border: 1px solid var(--accent-border);
+  color: var(--accent);
+}
+.home-snippet {
+  font-size: 12px;
+  color: #9a96a3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 면접 연습 CTA 카드 */
+.home-cta-card { display: flex; flex-direction: column; }
+.home-cta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 4px 20px 20px;
+}
+.home-cta-text {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.7;
+  color: var(--text);
+}
+.home-cta-text b { color: var(--accent); font-weight: 600; }
+
+@media (max-width: 860px) {
+  .dash-bottom-grid { grid-template-columns: 1fr; }
+}

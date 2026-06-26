@@ -8,6 +8,7 @@ import { getJob } from "../api";
 import AppShell from "../components/AppShell";
 import { CopyIcon, ExternalLinkIcon } from "../components/icons";
 import { jobRole, sourceMeta } from "./sourceMeta";
+import { formatDeadline } from "../format";
 import "../trends.css";
 
 // 원문/섹션을 마크다운으로 예쁘게 렌더(일반 텍스트도 줄바꿈 유지).
@@ -71,7 +72,7 @@ export function JobDetail({
         <div className="tr-detail-head">
           <span className="job-src-pill" style={{ color: m.color }}>{m.label}</span>
           <span className="tr-date">
-            {job.deadline ? `마감 ~${job.deadline}` : job.deadline_text ?? ""}
+            {job.deadline ? `마감 ~${formatDeadline(job.deadline)}` : job.deadline_text ?? ""}
           </span>
         </div>
 

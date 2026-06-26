@@ -83,6 +83,20 @@ export interface JobsResponse {
   sources: string[]; // 현재 DB에 존재하는 출처 목록(필터칩용)
 }
 
+// 추천 공고: 공고 + 유사도 점수(0~1, 높을수록 적합).
+export interface RecommendedJob extends JobPosting {
+  score: number;
+}
+
+export interface RecommendedJobsResponse {
+  items: RecommendedJob[];
+  basedOn: {
+    roles: string[]; // 추천에 사용된 직무
+    resumeUsed: boolean; // 이력서 프로필 반영 여부
+    method: "semantic" | "keyword"; // 임베딩 의미검색 / 키워드 폴백
+  };
+}
+
 // ── 관리자: 사이트별 크롤링 설정 ───────────────────────────────────────────
 // 마스터(is_admin) 계정만 조회·수정할 수 있다. 크롤러(파이썬 데몬)가 이 값을 읽어
 // 사이트마다 정해진 주기로 자동 수집하거나(auto), 수동 실행만 받거나(manual),
@@ -104,5 +118,78 @@ export interface CrawlSetting {
 
 export interface CrawlSettingsResponse {
   items: CrawlSetting[];
+}
+
+// ── 면접 연습 녹화(면접 기록) ──────────────────────────────────────────────
+// 사용자가 면접 연습 화면에서 녹화한 영상과, 말한 내용을 실시간 변환한 자막(transcript)을
+// 보관한다. 영상 바이트는 DB(BYTEA)에 함께 저장하고, 목록·재생은 아래 API 로 노출한다.
+export interface InterviewRecording {
+  id: number;
+  title: string; // 사용자가 붙인 제목(없으면 날짜 기반 자동 제목)
+  transcript: string; // 음성→텍스트 변환 결과(말한 내용 전체)
+  duration_sec: number; // 녹화 길이(초)
+  mime_type: string; // 예: video/webm
+  size_bytes: number; // 영상 파일 크기
+  created_at: string; // 생성 시각(ISO)
+}
+
+export interface RecordingsResponse {
+  items: InterviewRecording[];
+}
+
+// ── 이력서 피드백(이력서 PDF 업로드·보관) ──────────────────────────────────
+// 사용자가 올린 이력서 PDF 와, 추후 생성될 AI 피드백을 보관한다.
+// 로컬 LLM 이 이력서 원문에서 뽑아낸 구조화 프로필.
+// 면접 질문 생성·공고 추천의 공용 입력으로 재사용한다.
+export interface ResumeProfile {
+  summary: string; // 한 줄 요약
+  roles: string[]; // 직무(예: 백엔드 개발자)
+  skills: string[]; // 기술/역량
+  years: number | null; // 총 경력 연수(모르면 null)
+  domains: string[]; // 산업/도메인
+  strengths: string[]; // 강점
+  weaknesses: string[]; // 보완점
+  keywords: string[]; // 매칭용 키워드
+}
+
+export type AnalysisStatus = "pending" | "processing" | "done" | "error";
+
+export interface Resume {
+  id: number;
+  filename: string; // 원본 파일명
+  mime_type: string; // application/pdf
+  size_bytes: number;
+  extracted_chars: number; // PDF 에서 추출한 원문 글자 수(추출 실패 시 0)
+  analysis_status: AnalysisStatus; // 분석 진행 상태
+  analysis: ResumeProfile | null; // 구조화 분석 결과(완료 전 null)
+  feedback: string | null; // 마크다운 피드백(완료 전 null)
+  analyzed_at: string | null; // 분석 완료 시각(ISO) 또는 null
+  created_at: string; // 생성 시각(ISO)
+}
+
+export interface ResumesResponse {
+  items: Resume[];
+}
+
+// ── 면접 예상 질문 ──────────────────────────────────────────────────────────
+export interface InterviewQuestion {
+  category: string; // 지원동기 / 직무역량 / 기술 / 경험기반 / 인성
+  question: string;
+  intent: string; // 이 질문이 평가하려는 포인트(없으면 빈 문자열)
+}
+
+export interface InterviewQuestionsRequest {
+  resumeId?: number; // 생략 시 가장 최근 분석된 이력서를 사용
+  jobId?: number; // 특정 채용 공고를 겨냥할 때
+  count?: number; // 생성 개수(기본 8, 3~15)
+}
+
+export interface InterviewQuestionsResponse {
+  questions: InterviewQuestion[];
+  basedOn: {
+    roles: string[]; // 질문 생성에 사용된 직무
+    resumeUsed: boolean; // 이력서 프로필 반영 여부
+    jobTitle: string | null; // 겨냥한 공고 제목(있으면)
+  };
 }
 
