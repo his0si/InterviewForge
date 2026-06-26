@@ -2,22 +2,17 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import type {
   InterviewRecording,
-  JobPosting,
   PublicUser,
   RecommendedJob,
   Resume,
 } from "@e-lifethon/shared";
-import { getJobs, getRecommendedJobs, getRecordings, getResumes } from "../api";
+import { getRecommendedJobs, getRecordings, getResumes } from "../api";
 import AppShell from "../components/AppShell";
 import { sourceMeta } from "./sourceMeta";
 import { formatDeadline } from "../format";
 import {
   BotIcon,
-  ChevronRightIcon,
   ExternalLinkIcon,
-  NewspaperIcon,
-  NoteIcon,
-  ResumeIcon,
   SparkleIcon,
 } from "../components/icons";
 import "./home.css";
@@ -50,7 +45,6 @@ export function Home({
   onLogout: () => void;
 }) {
   const name = user.nickname || user.email.split("@")[0];
-  const [jobs, setJobs] = useState<JobPosting[]>([]);
   const [recommended, setRecommended] = useState<RecommendedJob[]>([]);
   const [recRoles, setRecRoles] = useState<string[]>([]);
   const [recordings, setRecordings] = useState<InterviewRecording[]>([]);
@@ -58,10 +52,7 @@ export function Home({
 
   useEffect(() => {
     // 각 영역을 독립적으로 로드(하나가 실패해도 나머지는 표시).
-    getJobs({ limit: 5 })
-      .then((r) => setJobs(r.items))
-      .catch(() => {});
-    getRecommendedJobs(5)
+    getRecommendedJobs(10)
       .then((r) => {
         setRecommended(r.items);
         setRecRoles(r.basedOn.roles);
@@ -75,65 +66,18 @@ export function Home({
       .catch(() => {});
   }, []);
 
-  const tiles = [
-    {
-      to: "/jobs",
-      icon: <NewspaperIcon size={20} />,
-      label: "채용 공고",
-      desc: "맞춤 공고 모아보기",
-      stat: jobs.length ? `${jobs.length}건+ 최신` : "둘러보기",
-    },
-    {
-      to: "/resume",
-      icon: <ResumeIcon size={20} />,
-      label: "이력서 피드백",
-      desc: "이력서 PDF 올리기",
-      stat: resumes.length ? `${resumes.length}개 업로드` : "시작하기",
-    },
-    {
-      to: "/practice",
-      icon: <BotIcon size={20} />,
-      label: "면접 연습",
-      desc: "녹화하며 연습",
-      stat: "녹화 시작",
-    },
-    {
-      to: "/history",
-      icon: <NoteIcon size={20} />,
-      label: "면접 기록",
-      desc: "다시 보기",
-      stat: recordings.length ? `${recordings.length}개 기록` : "기록 없음",
-    },
-  ];
-
   return (
     <AppShell user={user} onUser={onUser} onLogout={onLogout}>
+      <div className="home-dash">
       <div className="dash-greeting">
         <h1>안녕하세요, {name}님</h1>
         <p>오늘 · {todayLabel()} — 오늘도 면접 준비를 시작해 볼까요?</p>
       </div>
 
-      {/* 바로가기 타일 4개 */}
-      <div className="home-tiles">
-        {tiles.map((t) => (
-          <Link key={t.to} to={t.to} className="home-tile">
-            <span className="home-tile-icon">{t.icon}</span>
-            <span className="home-tile-body">
-              <span className="home-tile-label">{t.label}</span>
-              <span className="home-tile-desc">{t.desc}</span>
-            </span>
-            <span className="home-tile-stat">
-              {t.stat}
-              <ChevronRightIcon size={14} />
-            </span>
-          </Link>
-        ))}
-      </div>
-
       {/* 맞춤 추천 공고 + 면접 기록 */}
-      <div className="dash-bottom-grid" style={{ marginTop: 24 }}>
+      <div className="dash-bottom-grid home-grid-top">
         {/* 맞춤 추천 공고(직무 + 이력서 기반 로컬 AI 의미검색) */}
-        <section className="dash-card">
+        <section className="dash-card dash-card-accent">
           <div className="dash-card-head">
             <h2>
               <SparkleIcon size={16} /> 맞춤 추천 공고
@@ -154,15 +98,17 @@ export function Home({
                 return (
                   <li key={j.id} className="dash-news-row">
                     <div className="dash-news-meta">
-                      <span className="job-src-pill" style={{ color: m.color, height: 22 }}>
+                      <span className="job-src-pill" style={{ color: m.color }}>
                         {m.label}
                       </span>
                       {j.company && <span className="home-sub">{j.company}</span>}
-                      {j.score > 0 && (
-                        <span className="home-rec-match">적합도 {Math.round(j.score * 100)}%</span>
-                      )}
-                      <span className="dash-date">
-                        {j.deadline ? `~${formatDeadline(j.deadline)}` : j.deadline_text ?? ""}
+                      <span className="home-rec-side">
+                        {j.score > 0 && (
+                          <span className="home-rec-match">적합도 {Math.round(j.score * 100)}%</span>
+                        )}
+                        <span className="dash-date">
+                          {j.deadline ? `~${formatDeadline(j.deadline)}` : j.deadline_text ?? ""}
+                        </span>
                       </span>
                     </div>
                     <div className="dash-news-title">
@@ -212,7 +158,7 @@ export function Home({
       </div>
 
       {/* 이력서 피드백 + 면접 연습 */}
-      <div className="dash-bottom-grid" style={{ marginTop: 24 }}>
+      <div className="dash-bottom-grid home-grid-bottom">
         {/* 이력서 피드백 */}
         <section className="dash-card">
           <div className="dash-card-head">
@@ -263,6 +209,7 @@ export function Home({
             </Link>
           </div>
         </section>
+      </div>
       </div>
     </AppShell>
   );
