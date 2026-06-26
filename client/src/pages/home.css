@@ -1,55 +1,80 @@
 /* 홈 대시보드 전용 스타일. dash-* / pr-* 토큰과 함께 쓰인다. */
 
-/* 바로가기 타일 4개 */
-.home-tiles {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-  margin-top: 20px;
-}
-@media (max-width: 900px) {
-  .home-tiles { grid-template-columns: repeat(2, 1fr); }
-}
-@media (max-width: 520px) {
-  .home-tiles { grid-template-columns: 1fr; }
-}
-
-.home-tile {
+/* 홈 대시보드 래퍼: 인사말 + 카드 2줄(2×2 그리드).
+   카드는 내용 높이에 맞춰 자연스럽게 늘어나고, 같은 줄의 좌/우 카드는 높이를 맞춘다.
+   → 윗줄(목록 5개)은 자연히 높고, 아랫줄(요약·CTA)은 컴팩트해 버튼 아래 빈 공간이 없다. */
+.home-dash {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 18px;
-  background: #fff;
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  border-radius: 14px;
-  text-decoration: none;
-  transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+  gap: 24px;
 }
-.home-tile:hover {
-  border-color: var(--accent-border);
-  box-shadow: 0 6px 20px rgba(57, 59, 84, 0.08);
-  transform: translateY(-1px);
+
+/* 좌/우 카드를 정확히 반반으로 유지.
+   카드 안의 긴 텍스트(white-space:nowrap 등)가 컬럼을 넓히지 못하도록
+   그리드 아이템의 기본 min-width:auto 를 0 으로 덮어쓴다. */
+.home-dash .dash-bottom-grid > .dash-card {
+  min-width: 0;
 }
-.home-tile-icon {
-  display: grid;
-  place-content: center;
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  background: var(--accent-bg);
-  color: var(--accent);
+
+/* 카드 내부를 세로 정렬: 같은 줄의 카드들이 헤더·본문 리듬을 일관되게 유지 */
+.home-dash .dash-card {
+  display: flex;
+  flex-direction: column;
 }
-.home-tile-body { display: flex; flex-direction: column; gap: 3px; }
-.home-tile-label { font-size: 15px; font-weight: 600; color: var(--text-h); }
-.home-tile-desc { font-size: 12.5px; color: var(--text); }
-.home-tile-stat {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  margin-top: 2px;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--accent);
+
+/* 목록은 카드 안에서 위쪽 정렬(자연 높이). 같은 줄에서 더 긴 카드에 맞춰
+   늘어나도 항목이 위로 붙어 통일감 유지 */
+.home-dash .dash-card .dash-list {
+  flex: 1 1 auto;
+}
+
+/* 맞춤 추천 공고 카드: 테두리(+그림자) 강조 */
+.home-dash .dash-card-accent {
+  border-color: var(--accent);
+  box-shadow: 0 4px 16px rgba(57, 59, 84, 0.12);
+}
+
+/* ===== PC: 무조건 한 화면(뷰포트)에 맞추고, 넘치면 목록 안에서만 스크롤 ===== */
+@media (min-width: 1025px) {
+  /* 본문(페이지) 자체는 스크롤하지 않도록 뷰포트 높이에 고정 */
+  .app-main:has(.home-dash) {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+  .home-dash {
+    flex: 1;
+    min-height: 0;
+    gap: 18px;
+  }
+  .home-dash .dash-greeting { flex: 0 0 auto; }
+
+  /* 아래 줄: 내용 높이에 맞춰 컴팩트하게(녹화 버튼까지 항상 노출) */
+  .home-dash .home-grid-bottom { flex: 0 0 auto; }
+  /* 위 줄: 남는 세로 공간을 모두 채움 */
+  .home-dash .home-grid-top {
+    flex: 1 1 auto;
+    min-height: 0;
+    grid-template-rows: minmax(0, 1fr);
+  }
+
+  /* 카드: 헤더는 고정, 목록 영역만 카드 안에서 스크롤 */
+  .home-dash .dash-card { min-height: 0; }
+  .home-dash .dash-card-head { flex: 0 0 auto; }
+  .home-dash .home-grid-top .dash-card .dash-list {
+    min-height: 0;
+    overflow-y: auto;
+  }
+
+  /* 추천 공고 5개가 스크롤 없이 한 화면에 들어오도록 행 간격을 촘촘하게 */
+  .home-dash .home-grid-top .dash-news-row,
+  .home-dash .home-grid-top .dash-memo-row {
+    padding-top: 9px;
+    padding-bottom: 9px;
+  }
+  .home-dash .home-grid-top .dash-news-title {
+    margin-top: 2px;
+  }
 }
 
 /* 카드 내부 보조 텍스트 */
@@ -72,15 +97,50 @@
   font-weight: 500;
   color: var(--text);
 }
+
+/* 출처 칩: 너비를 통일해 회사명 시작 위치를 줄마다 맞춘다(좌측 정렬 정돈) */
+.dash-news-meta .job-src-pill {
+  min-width: 56px;
+  height: 24px;
+  justify-content: center;
+}
+
+/* 회사명이 길면 오른쪽 그룹을 밀어내지 않고 말줄임 처리 */
+.dash-news-meta .home-sub { min-width: 0; }
+
+/* 적합도·마감일을 한 덩어리로 우측에 고정 → 줄마다 들쭉날쭉하지 않게 */
+.home-rec-side {
+  margin-left: auto;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+/* 마감일 폭을 통일해 적합도 배지의 오른쪽 끝이 줄마다 일치하도록 */
+.home-rec-side .dash-date {
+  margin-left: 0;
+  min-width: 72px;
+  text-align: right;
+}
+
 .home-rec-match {
   flex-shrink: 0;
-  padding: 2px 8px;
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 9px;
   border-radius: 999px;
   font-size: 11px;
   font-weight: 600;
   background: var(--accent-bg);
   border: 1px solid var(--accent-border);
   color: var(--accent);
+}
+
+/* 추천 공고 제목: 옆 카드 본문처럼 연한 글씨로 */
+.home-dash .dash-news-title span {
+  color: var(--text);
+  font-weight: 500;
 }
 .home-snippet {
   font-size: 12px;

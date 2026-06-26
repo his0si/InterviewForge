@@ -46,6 +46,12 @@ export function Practice({
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
+  // 음성인식을 계속 살려둘지(녹화 중) 여부. onend/워치독 재시작의 게이트.
+  const keepAliveRef = useRef<boolean>(false);
+  // 마지막으로 인식 결과가 들어온 시각 — 워치독이 멈춤을 감지하는 기준.
+  const lastResultAtRef = useRef<number>(0);
+  // 인식 엔진이 멈췄는지 주기적으로 확인하는 워치독 타이머.
+  const watchdogRef = useRef<number | null>(null);
   const timerRef = useRef<number | null>(null);
   const startedAtRef = useRef<number>(0);
   // 확정된 자막 텍스트(최신 값을 저장 시점에 쓰기 위해 ref 로도 보관).
@@ -118,10 +124,41 @@ export function Practice({
     }
   }, []);
 
+  // 아직 확정되지 않은 조각을 본문에 합쳐 누락을 막는다.
+  const flushInterim = useCallback(() => {
+    const tail = interimRef.current.trim();
+    if (tail) {
+      finalTranscriptRef.current = finalTranscriptRef.current
+        ? finalTranscriptRef.current + "\n" + tail
+        : tail;
+      setFinalText(finalTranscriptRef.current);
+    }
+    interimRef.current = "";
+    setInterimText("");
+  }, []);
+
   // 실시간 음성인식 시작(한국어). 미지원 브라우저면 조용히 건너뛴다.
+  // 끊기거나 멈추면 "같은 객체 재사용" 대신 항상 새 인스턴스로 재시작한다.
+  // (Chrome 은 한 번 끝난 인식 객체를 다시 start 하면 조용히 죽는 일이 잦다.)
   const startRecognition = useCallback(() => {
     const Ctor = getSpeechRecognition();
     if (!Ctor) return;
+    keepAliveRef.current = true;
+
+    // 직전 인스턴스가 남아 있으면 콜백을 끊고 정리(중복 재시작 방지).
+    const prev = recognitionRef.current;
+    if (prev) {
+      prev.onend = null;
+      prev.onerror = null;
+      prev.onresult = null;
+      try {
+        prev.abort();
+      } catch {
+        /* 무시 */
+      }
+      recognitionRef.current = null;
+    }
+
     const rec = new Ctor();
     rec.lang = "ko-KR";
     rec.continuous = true;
@@ -129,6 +166,7 @@ export function Practice({
     rec.maxAlternatives = 1;
 
     rec.onresult = (ev: SpeechRecognitionEvent) => {
+      lastResultAtRef.current = Date.now();
       let interim = "";
       for (let i = ev.resultIndex; i < ev.results.length; i++) {
         const res = ev.results[i];
@@ -148,36 +186,67 @@ export function Practice({
       setInterimText(interim);
     };
     rec.onerror = (ev: SpeechRecognitionErrorEvent) => {
-      // no-speech / aborted 등은 무시하고, 권한 거부만 사용자에게 알린다.
+      // 권한 거부는 사용자에게 알리고 재시작을 멈춘다.
       if (ev.error === "not-allowed" || ev.error === "service-not-allowed") {
+        keepAliveRef.current = false;
         setError("마이크 권한이 없어 자막을 만들 수 없습니다.");
       }
+      // no-speech / network / aborted 등은 onend 의 재시작 로직이 회복시킨다.
     };
-    // 녹화 중 자동으로 끊기면(엔진 타임아웃) 다시 살린다.
+    // 자동으로 끊기면(엔진 타임아웃/네트워크) 새 인스턴스로 다시 살린다.
     rec.onend = () => {
-      // 끊기는 순간 확정 안 된 조각도 본문에 합쳐 누락을 막는다.
-      const tail = interimRef.current.trim();
-      if (tail) {
-        finalTranscriptRef.current = finalTranscriptRef.current
-          ? finalTranscriptRef.current + "\n" + tail
-          : tail;
-        interimRef.current = "";
-        setFinalText(finalTranscriptRef.current);
-        setInterimText("");
-      }
-      if (recorderRef.current && recorderRef.current.state === "recording") {
-        try {
-          rec.start();
-        } catch {
-          /* 이미 시작된 경우 무시 */
-        }
+      flushInterim();
+      if (recognitionRef.current === rec) recognitionRef.current = null;
+      if (keepAliveRef.current) {
+        // 약간 지연 후 재시작 — start 충돌을 피한다.
+        window.setTimeout(() => {
+          if (keepAliveRef.current) startRecognition();
+        }, 250);
       }
     };
     try {
       rec.start();
       recognitionRef.current = rec;
+      lastResultAtRef.current = Date.now();
     } catch {
-      /* 일부 브라우저에서 중복 start 예외 — 무시 */
+      // 중복 start 등 — 잠시 후 새 인스턴스로 재시도.
+      window.setTimeout(() => {
+        if (keepAliveRef.current) startRecognition();
+      }, 350);
+    }
+  }, [flushInterim]);
+
+  // 워치독: 결과가 일정 시간 안 들어오면 엔진이 멈춘 것으로 보고 강제 재가동.
+  // 말하는 중에는 interim 결과가 계속 흐르므로 발화 중간을 끊지 않는다.
+  const startWatchdog = useCallback(() => {
+    if (watchdogRef.current) clearInterval(watchdogRef.current);
+    watchdogRef.current = window.setInterval(() => {
+      if (!keepAliveRef.current) return;
+      if (Date.now() - lastResultAtRef.current > 6000) {
+        // 멈춤(또는 침묵) 감지 → 새 인스턴스로 재시작.
+        lastResultAtRef.current = Date.now();
+        startRecognition();
+      }
+    }, 2000);
+  }, [startRecognition]);
+
+  const stopRecognition = useCallback(() => {
+    keepAliveRef.current = false;
+    if (watchdogRef.current) {
+      clearInterval(watchdogRef.current);
+      watchdogRef.current = null;
+    }
+    const rec = recognitionRef.current;
+    if (rec) {
+      rec.onend = null;
+      rec.onerror = null;
+      rec.onresult = null;
+      try {
+        rec.stop();
+      } catch {
+        /* 무시 */
+      }
+      recognitionRef.current = null;
     }
   }, []);
 
@@ -224,9 +293,11 @@ export function Practice({
       setElapsed(Math.floor((Date.now() - startedAtRef.current) / 1000));
     }, 250);
 
+    lastResultAtRef.current = Date.now();
     startRecognition();
+    startWatchdog();
     setPhase("recording");
-  }, [reviewUrl, startRecognition]);
+  }, [reviewUrl, startRecognition, startWatchdog]);
 
   // 녹화 정지.
   const stopRecording = useCallback(() => {
@@ -234,29 +305,13 @@ export function Practice({
       clearInterval(timerRef.current);
       timerRef.current = null;
     }
-    if (recognitionRef.current) {
-      try {
-        recognitionRef.current.onend = null;
-        recognitionRef.current.stop();
-      } catch {
-        /* 무시 */
-      }
-      recognitionRef.current = null;
-    }
+    stopRecognition();
     // 마지막까지 말했지만 아직 확정되지 않은 조각도 본문에 합친다.
-    const tail = interimRef.current.trim();
-    if (tail) {
-      finalTranscriptRef.current = finalTranscriptRef.current
-        ? finalTranscriptRef.current + "\n" + tail
-        : tail;
-      setFinalText(finalTranscriptRef.current);
-    }
-    interimRef.current = "";
-    setInterimText("");
+    flushInterim();
     if (recorderRef.current && recorderRef.current.state !== "inactive") {
       recorderRef.current.stop(); // onstop 에서 review 로 전환
     }
-  }, []);
+  }, [stopRecognition, flushInterim]);
 
   // 저장: 영상 + 자막을 서버로 업로드.
   const save = useCallback(async () => {
@@ -303,8 +358,10 @@ export function Practice({
   useEffect(() => {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
+      keepAliveRef.current = false;
+      if (watchdogRef.current) clearInterval(watchdogRef.current);
       try {
-        recognitionRef.current?.stop();
+        recognitionRef.current?.abort();
       } catch {
         /* 무시 */
       }

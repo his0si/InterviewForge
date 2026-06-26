@@ -4,7 +4,7 @@ import type { InterviewRecording, PublicUser } from "@e-lifethon/shared";
 import { deleteRecording, getRecordings, recordingVideoUrl } from "../api";
 import AppShell from "../components/AppShell";
 import PageHeader from "../components/PageHeader";
-import { FilmIcon, PlayIcon, TrashIcon } from "../components/icons";
+import { CopyIcon, FilmIcon, PlayIcon, TrashIcon } from "../components/icons";
 import "./practice.css";
 
 // 면접 기록: 저장된 녹화 목록 → 선택하면 영상 재생 + 변환된 자막 전체를 본다.
@@ -71,6 +71,17 @@ export function History({
     }
   }
 
+  const [copied, setCopied] = useState(false);
+  async function onCopy(text: string) {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      /* 클립보드 접근 불가 시 무시 */
+    }
+  }
+
   const selected = items.find((r) => r.id === selectedId) ?? null;
 
   return (
@@ -126,12 +137,13 @@ export function History({
             {selected ? (
               <>
                 <div className="pr-hist-detail-head">
-                  <div>
+                  <div className="pr-hist-detail-title">
                     <h2>{selected.title}</h2>
-                    <p className="pr-hist-sub">
-                      {fmtDate(selected.created_at)} · {fmtDuration(selected.duration_sec)} ·{" "}
-                      {fmtSize(selected.size_bytes)}
-                    </p>
+                    <div className="pr-hist-chips">
+                      <span className="pr-chip">{fmtDate(selected.created_at)}</span>
+                      <span className="pr-chip">{fmtDuration(selected.duration_sec)}</span>
+                      <span className="pr-chip">{fmtSize(selected.size_bytes)}</span>
+                    </div>
                   </div>
                   <button
                     type="button"
@@ -142,23 +154,36 @@ export function History({
                   </button>
                 </div>
 
-                <video
-                  key={selected.id}
-                  className="pr-video"
-                  controls
-                  playsInline
-                  src={recordingVideoUrl(selected.id)}
-                />
-
-                <div className="pr-transcript-head" style={{ marginTop: 16 }}>
-                  <span>변환된 자막</span>
+                <div className="pr-hist-stage">
+                  <video
+                    key={selected.id}
+                    className="pr-video"
+                    controls
+                    playsInline
+                    src={recordingVideoUrl(selected.id)}
+                  />
                 </div>
-                <div className="pr-hist-transcript">
-                  {selected.transcript.trim() ? (
-                    selected.transcript
-                  ) : (
-                    <span className="pr-transcript-empty">자막이 없습니다.</span>
-                  )}
+
+                <div className="pr-hist-transcript-card">
+                  <div className="pr-transcript-head">
+                    <span>답변</span>
+                    {selected.transcript.trim() && (
+                      <button
+                        type="button"
+                        className="pr-copy-btn"
+                        onClick={() => onCopy(selected.transcript)}
+                      >
+                        <CopyIcon size={14} /> {copied ? "복사됨" : "복사"}
+                      </button>
+                    )}
+                  </div>
+                  <div className="pr-hist-transcript">
+                    {selected.transcript.trim() ? (
+                      selected.transcript
+                    ) : (
+                      <span className="pr-transcript-empty">자막이 없습니다.</span>
+                    )}
+                  </div>
                 </div>
               </>
             ) : (

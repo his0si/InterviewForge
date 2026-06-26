@@ -11,7 +11,7 @@ import {
 } from "../api";
 import AppShell from "../components/AppShell";
 import PageHeader from "../components/PageHeader";
-import { ExternalLinkIcon, RotateIcon, SparkleIcon } from "../components/icons";
+import { ExternalLinkIcon, RotateIcon, SparkleIcon, TrashIcon } from "../components/icons";
 import "./practice.css";
 
 // 이력서 피드백: PDF 업로드 → 로컬 LLM(Ollama)이 원문을 분석해
@@ -91,9 +91,11 @@ function AnalysisPanel({ r, onReanalyze }: { r: Resume; onReanalyze: (id: number
         <p className="rs-analysis-empty">
           분석에 실패했습니다. 텍스트가 없는 스캔본 PDF 이거나 일시적인 오류일 수 있어요.
         </p>
-        <button type="button" className="pr-btn pr-btn-ghost rs-btn-sm" onClick={() => onReanalyze(r.id)}>
-          <RotateIcon size={14} /> 다시 분석
-        </button>
+        <div className="rs-analysis-foot">
+          <button type="button" className="pr-btn pr-btn-ghost rs-btn-sm" onClick={() => onReanalyze(r.id)}>
+            <RotateIcon size={14} /> 다시 분석
+          </button>
+        </div>
       </div>
     );
   }
@@ -136,14 +138,21 @@ function AnalysisPanel({ r, onReanalyze }: { r: Resume; onReanalyze: (id: number
       )}
 
       {r.feedback && (
-        <div className="rs-feedback">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{r.feedback}</ReactMarkdown>
-        </div>
+        <section className="rs-feedback-section">
+          <div className="rs-section-label">
+            <SparkleIcon size={15} /> AI 피드백
+          </div>
+          <div className="rs-feedback">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>{r.feedback}</ReactMarkdown>
+          </div>
+        </section>
       )}
 
-      <button type="button" className="pr-btn pr-btn-ghost rs-btn-sm" onClick={() => onReanalyze(r.id)}>
-        <RotateIcon size={14} /> 다시 분석
-      </button>
+      <div className="rs-analysis-foot">
+        <button type="button" className="pr-btn pr-btn-ghost rs-btn-sm" onClick={() => onReanalyze(r.id)}>
+          <RotateIcon size={14} /> 다시 분석
+        </button>
+      </div>
     </div>
   );
 }
@@ -327,14 +336,14 @@ export function ResumeFeedback({
                         target="_blank"
                         rel="noreferrer"
                       >
-                        <ExternalLinkIcon size={15} /> 보기
+                        <ExternalLinkIcon size={14} /> 보기
                       </a>
                       <button
                         type="button"
                         className="pr-btn pr-btn-danger rs-btn-sm"
                         onClick={() => onDelete(r.id)}
                       >
-                        삭제
+                        <TrashIcon size={14} /> 삭제
                       </button>
                     </div>
                   </div>

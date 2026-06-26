@@ -178,17 +178,21 @@
 .pr-btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   padding: 10px 18px;
   border-radius: 9px;
   font-family: inherit;
   font-size: 14px;
   font-weight: 500;
+  line-height: 1.2;
+  white-space: nowrap;
+  text-decoration: none;
   cursor: pointer;
   border: 1px solid var(--border);
   background: #fff;
   color: var(--text-h);
-  transition: filter 0.15s, background 0.15s;
+  transition: filter 0.15s, background 0.15s, border-color 0.15s;
 }
 .pr-btn:hover:not(:disabled) { filter: brightness(0.97); }
 .pr-btn:disabled { opacity: 0.6; cursor: not-allowed; }
@@ -199,8 +203,8 @@
 .pr-btn-rec .pr-rec-dot { background: #fff; }
 .pr-btn-stop { background: #1f1f29; color: #fff; border-color: #1f1f29; }
 .pr-btn-ghost { background: #fff; }
-.pr-btn-danger { background: #fff; color: #c0353a; border-color: #ecc4c5; padding: 7px 14px; font-size: 13px; }
-.pr-btn-danger:hover:not(:disabled) { background: #fdf1f1; }
+.pr-btn-danger { background: #fff; color: #c0353a; border-color: #ecc4c5; }
+.pr-btn-danger:hover:not(:disabled) { background: #fdf1f1; border-color: #e3a9ab; }
 
 .pr-title-input {
   flex: 1 1 200px;
@@ -364,20 +368,82 @@
   gap: 12px;
   margin-bottom: 14px;
 }
+.pr-hist-detail-title { min-width: 0; }
 .pr-hist-detail-head h2 { margin: 0; font-size: 17px; font-weight: 600; color: var(--text-h); }
-.pr-hist-sub { margin: 4px 0 0; font-size: 12.5px; color: var(--text); font-variant-numeric: tabular-nums; }
-.pr-hist-transcript {
-  margin-top: 8px;
-  padding: 14px 16px;
-  border-radius: 11px;
-  background: #fbfbfa;
+
+/* 메타데이터 칩(날짜·길이·용량) */
+.pr-hist-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.pr-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: #f3f2f7;
   border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 영상 무대: 세로 영상도 16:9 안에 깔끔히 레터박스 */
+.pr-hist-stage {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  max-height: 420px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0d0d12;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.pr-hist-stage .pr-video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  aspect-ratio: auto;
+}
+
+/* 변환된 자막 카드 */
+.pr-hist-transcript-card {
+  margin-top: 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #fbfbfa;
+  overflow: hidden;
+}
+.pr-hist-transcript-card .pr-transcript-head {
+  border-bottom: 1px solid var(--border);
+}
+.pr-copy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--text-h);
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.pr-copy-btn:hover { background: var(--accent-bg); color: var(--accent); border-color: var(--accent-border); }
+.pr-hist-transcript {
+  padding: 16px 18px;
   font-size: 14.5px;
-  line-height: 1.8;
+  line-height: 1.85;
   color: var(--text-h);
   white-space: pre-wrap;
   word-break: break-word;
-  max-height: 320px;
+  max-height: 260px;
   overflow-y: auto;
 }
 
@@ -503,10 +569,31 @@
   line-height: 1.75;
   color: var(--text-h);
 }
+.rs-feedback > :first-child { margin-top: 0; }
 .rs-feedback p { margin: 0 0 10px; }
-.rs-feedback ul { margin: 4px 0 12px; padding-left: 20px; }
-.rs-feedback li { margin: 3px 0; }
-.rs-feedback strong { color: var(--text-h); }
+.rs-feedback h1,
+.rs-feedback h2,
+.rs-feedback h3,
+.rs-feedback h4 {
+  margin: 16px 0 6px;
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--text-h);
+}
+/* 불릿: 기본 디스크 대신 일관된 accent 점으로 */
+.rs-feedback ul { margin: 4px 0 14px; padding-left: 2px; list-style: none; }
+.rs-feedback li { position: relative; margin: 5px 0; padding-left: 18px; }
+.rs-feedback li::before {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 9px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent-border);
+}
+.rs-feedback strong { color: var(--text-h); font-weight: 700; }
 .rs-row-main { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .rs-file-pill {
   flex-shrink: 0;
@@ -533,4 +620,31 @@
 .rs-file-name:hover { text-decoration: underline; }
 .rs-file-meta { font-size: 12px; color: var(--text); font-variant-numeric: tabular-nums; }
 .rs-row-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.rs-btn-sm { padding: 7px 12px; font-size: 13px; }
+/* 모든 소형 액션 버튼의 단일 규격(높이·여백·아이콘 간격 통일) */
+.rs-btn-sm {
+  height: 34px;
+  padding: 0 13px;
+  font-size: 13px;
+  gap: 6px;
+  border-radius: 8px;
+}
+
+/* 분석 패널 하단 액션 바: '다시 분석' 버튼을 우측 정렬(전폭 늘어남 방지) */
+.rs-analysis-foot {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+/* AI 피드백 섹션 라벨 */
+.rs-feedback-section { display: flex; flex-direction: column; gap: 10px; }
+.rs-section-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+}
+.rs-section-label svg { color: var(--accent); }
