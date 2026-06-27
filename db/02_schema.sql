@@ -35,9 +35,12 @@ CREATE TABLE IF NOT EXISTS interview_recordings (
   mime_type     TEXT NOT NULL DEFAULT 'video/webm',
   size_bytes    INTEGER NOT NULL DEFAULT 0,
   video         BYTEA NOT NULL,
+  interview_report JSONB,                  -- AI 모의면접으로 녹화했을 때의 질문·평가·리포트(아니면 NULL)
   created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS idx_recordings_user ON interview_recordings(user_id, created_at DESC);
+-- 기존 DB 보강: 컬럼이 없으면 추가(멱등).
+ALTER TABLE interview_recordings ADD COLUMN IF NOT EXISTS interview_report JSONB;
 
 -- 이력서 피드백: 업로드한 이력서 PDF 를 BYTEA 로 보관(AI 피드백은 추후).
 CREATE TABLE IF NOT EXISTS resumes (

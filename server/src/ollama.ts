@@ -9,6 +9,10 @@ const OLLAMA_EMBED_MODEL = process.env.OLLAMA_EMBED_MODEL || "bge-m3:latest";
 
 export class OllamaError extends Error {}
 
+// 모델 응답을 JSON 으로 파싱하지 못했을 때의 오류(연결 실패와 구분).
+// AI 면접 엔진은 이 오류만 잡아 "필수 필드 fallback" 으로 흐름을 계속 진행시킨다.
+export class OllamaJsonError extends OllamaError {}
+
 // fetch + 타임아웃. Ollama 가 죽어 있으면 호출부에서 잡아 graceful 하게 처리한다.
 async function postJson(path: string, body: unknown, timeoutMs: number): Promise<any> {
   const ctrl = new AbortController();
@@ -47,8 +51,8 @@ export async function generate(prompt: string, opts: GenOpts = {}): Promise<stri
   return String(data.response ?? "").trim();
 }
 
-// JSON 강제 생성(구조화 추출). format:"json" 으로 파싱 안정성을 높인다.
-export async function generateJson<T = unknown>(prompt: string, opts: GenOpts = {}): Promise<T> {
+// 한 번 호출해 원본 응답 문자열을 받는다(format:"json").
+async function callJsonRaw(prompt: string, opts: GenOpts): Promise<string> {
   const data = await postJson(
     "/api/generate",
     {
@@ -60,15 +64,44 @@ export async function generateJson<T = unknown>(prompt: string, opts: GenOpts = 
     },
     opts.timeoutMs ?? 180_000
   );
-  const raw = String(data.response ?? "").trim();
+  return String(data.response ?? "").trim();
+}
+
+// 느슨한 JSON 파싱. 성공하면 파싱값을, 실패하면 undefined(예외 없음).
+// 모델이 코드펜스/잡설로 감싸는 경우 첫 { ~ 마지막 }(또는 [ ~ ])를 한 번 더 구제한다.
+function tryParseJson<T>(raw: string): T | undefined {
   try {
     return JSON.parse(raw) as T;
   } catch {
-    // 모델이 코드펜스 등으로 감싸는 경우를 한 번 더 구제한다.
     const m = raw.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
-    if (m) return JSON.parse(m[0]) as T;
-    throw new OllamaError("LLM JSON 파싱 실패");
+    if (m) {
+      try {
+        return JSON.parse(m[0]) as T;
+      } catch {
+        /* fallthrough */
+      }
+    }
+    return undefined;
   }
+}
+
+// JSON 강제 생성(구조화 추출). format:"json" 으로 파싱 안정성을 높인다.
+// 1차 응답이 깨지면 "JSON 만 출력" 을 강하게 요청해 한 번 더 재시도하고,
+// 그래도 실패하면 OllamaJsonError 를 던진다(호출부가 fallback 으로 처리할 수 있게).
+export async function generateJson<T = unknown>(prompt: string, opts: GenOpts = {}): Promise<T> {
+  const first = await callJsonRaw(prompt, opts);
+  const parsed = tryParseJson<T>(first);
+  if (parsed !== undefined) return parsed;
+
+  const retryPrompt =
+    `${prompt}\n\n` +
+    `[재요청] 직전 출력이 JSON 으로 파싱되지 않았습니다. ` +
+    `코드펜스/설명/주석 없이, 명시된 형식의 유효한 JSON 객체 하나만 출력하세요.`;
+  const second = await callJsonRaw(retryPrompt, opts);
+  const reparsed = tryParseJson<T>(second);
+  if (reparsed !== undefined) return reparsed;
+
+  throw new OllamaJsonError(`LLM JSON 파싱 실패(재시도 후). 모델 원본 응답:\n${second.slice(0, 500)}`);
 }
 
 // 임베딩 벡터(bge-m3, 1024차원). 추천 의미검색에 사용.

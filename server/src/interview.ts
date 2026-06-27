@@ -1,93 +1,88 @@
-// 면접 예상 질문 생성. 로컬 LLM(exaone3.5)으로 사용자 직무 + (있으면) 이력서 프로필 +
-// (있으면) 겨냥한 채용 공고를 근거로 카테고리별 질문을 만든다.
+// AI 모의면접(LangGraph 상호작용형) 라우트.
+//
+//  - 기존의 one-shot "예상 질문 생성"을 대체한다. 이력서 원문(resumes.extracted_text) +
+//    사용자 직무(users.jobs) + (선택) 겨냥한 공고를 근거로 첫 질문을 만들고,
+//    사용자의 답변(면접 연습 화면의 실시간 자막)을 평가해 논리를 파고드는 꼬리질문 또는
+//    다음 질문을 이어가며, 끝나면 최종 리포트를 낸다.
+//  - 실제 상태/순서 관리는 server/src/aiInterview 의 LangGraph 엔진이 맡는다.
+//  - 모든 추론은 로컬 Ollama(EXAONE 3.5)에서 처리한다(외부 API 키 불필요).
 import type { FastifyInstance } from "fastify";
 import type {
-  InterviewQuestion,
-  InterviewQuestionsRequest,
-  InterviewQuestionsResponse,
+  AiAnswerRequest,
+  AiAnswerResponse,
+  AiInterviewBasedOn,
   ResumeProfile,
+  StartAiInterviewRequest,
+  StartAiInterviewResponse,
 } from "@e-lifethon/shared";
 import { pool } from "./db.js";
 import { currentUserId } from "./auth.js";
-import { generateJson } from "./ollama.js";
+import { OllamaError } from "./ollama.js";
+import { startInterview, submitAnswer, getInterviewState } from "./aiInterview/interviewGraph.js";
 
-const CATEGORIES = ["지원동기", "직무역량", "기술", "경험기반", "인성"];
+// interviewId 의 소유자(user_id)를 interview_sessions 에서 확인한다.
+// 진행 중 세션의 그래프 상태는 PostgresSaver(checkpoints)에, 소유권/상태는 이 테이블에 있다.
+// 둘 다 DB 라서 서버 재시작·다중 인스턴스에도 면접을 이어갈 수 있다.
+async function sessionOwnerId(interviewId: string): Promise<string | null> {
+  const r = await pool.query(`SELECT user_id FROM interview_sessions WHERE id = $1`, [interviewId]);
+  return r.rows[0] ? String(r.rows[0].user_id) : null;
+}
 
-function buildPrompt(opts: {
+/** 직무 + 공고를 LangGraph 엔진의 grounding 근거(context)로 쓸 자연어로 직렬화한다. */
+function buildContext(opts: {
   roles: string[];
   profile: ResumeProfile | null;
   job: { title: string; company: string | null; summary: string | null } | null;
-  count: number;
 }): string {
-  const { roles, profile, job, count } = opts;
-  const parts: string[] = [];
-  parts.push(`너는 한국 기업 면접관이다. 아래 지원자 정보를 근거로 실제 면접에서 나올 법한 한국어 면접 질문 ${count}개를 만들어라.`);
-  parts.push(
-    `규칙:
-- 카테고리는 ${CATEGORIES.join(", ")} 중에서 고른다. 가능하면 여러 카테고리를 고루 섞는다.
-- 이력서 정보가 있으면 그 경험/기술을 파고드는 "경험기반" 꼬리질문을 반드시 포함한다.
-- 추측으로 없는 사실을 만들지 말 것. 질문은 구체적이고 자연스럽게.
-- intent 에는 이 질문으로 무엇을 평가하는지 한 줄로 적는다.`
-  );
-  parts.push(`지원 직무: ${roles.length ? roles.join(", ") : "(미지정)"}`);
+  const { roles, profile, job } = opts;
+  const lines: string[] = [];
+  if (roles.length) lines.push(`지원 직무: ${roles.join(", ")}`);
   if (profile) {
-    parts.push(
-      `이력서 요약: ${profile.summary || "(없음)"}
-보유 기술: ${profile.skills.join(", ") || "(없음)"}
-경력: ${profile.years != null ? profile.years + "년" : "(미상)"}
-강점: ${profile.strengths.join(", ") || "(없음)"}`
-    );
+    if (profile.skills?.length) lines.push(`이력서 분석 보유 기술: ${profile.skills.join(", ")}`);
+    if (profile.years != null) lines.push(`이력서 분석 경력: ${profile.years}년`);
   }
   if (job) {
-    parts.push(
-      `겨냥한 공고: ${job.title}${job.company ? " / " + job.company : ""}
-공고 요약: ${(job.summary || "").slice(0, 1200)}`
-    );
+    lines.push(`겨냥한 공고: ${job.title}${job.company ? " / " + job.company : ""}`);
+    if (job.summary) lines.push(`공고 요약/요건: ${job.summary.slice(0, 1200)}`);
   }
-  parts.push(
-    `JSON 으로만 답하라. 형식: {"questions":[{"category":"...","question":"...","intent":"..."}]}`
-  );
-  return parts.join("\n\n");
-}
-
-function normalizeQuestions(raw: any, count: number): InterviewQuestion[] {
-  const arr = Array.isArray(raw?.questions) ? raw.questions : Array.isArray(raw) ? raw : [];
-  return arr
-    .map((q: any) => ({
-      category: String(q?.category ?? "").trim() || "기타",
-      question: String(q?.question ?? "").trim(),
-      intent: String(q?.intent ?? "").trim(),
-    }))
-    .filter((q: InterviewQuestion) => q.question.length > 0)
-    .slice(0, count);
+  return lines.join("\n");
 }
 
 export async function interviewRoutes(app: FastifyInstance): Promise<void> {
-  app.post<{ Body: InterviewQuestionsRequest }>("/api/interview/questions", async (req, reply) => {
+  // ── 모의면접 시작: 이력서/직무/공고로 첫 질문 생성 ──────────────────────────
+  app.post<{ Body: StartAiInterviewRequest }>("/api/interview/session", async (req, reply) => {
     const userId = currentUserId(req);
     if (!userId) return reply.code(401).send({ error: "로그인이 필요합니다." });
 
     const body = req.body ?? {};
-    const count = Math.min(15, Math.max(3, Number(body.count) || 8));
 
-    // 1) 사용자 직무
+    // 1) 사용자 직무. body.role 로 등록된 직무 중 하나를 고르면 그 직무만,
+    //    아니면 등록된 직무 전체를 면접 근거로 쓴다.
     const u = await pool.query(`SELECT jobs FROM users WHERE id = $1`, [userId]);
-    const roles: string[] = (u.rows[0]?.jobs as string[] | undefined) ?? [];
+    const allRoles: string[] = (u.rows[0]?.jobs as string[] | undefined) ?? [];
+    const roles: string[] =
+      body.role && allRoles.includes(body.role) ? [body.role] : allRoles;
 
-    // 2) 이력서 프로필 (지정 id 또는 가장 최근 분석 완료본)
-    let profile: ResumeProfile | null = null;
+    // 2) 이력서 원문(extracted_text) + 구조화 프로필(있으면). 지정 id 또는 가장 최근본.
     const resumeQ = body.resumeId
       ? await pool.query(
-          `SELECT analysis FROM resumes WHERE id = $1 AND user_id = $2 AND analysis_status = 'done'`,
+          `SELECT extracted_text, analysis FROM resumes WHERE id = $1 AND user_id = $2`,
           [body.resumeId, userId]
         )
       : await pool.query(
-          `SELECT analysis FROM resumes
-             WHERE user_id = $1 AND analysis_status = 'done' AND analysis IS NOT NULL
-           ORDER BY analyzed_at DESC NULLS LAST LIMIT 1`,
+          `SELECT extracted_text, analysis FROM resumes
+             WHERE user_id = $1 AND extracted_text IS NOT NULL AND char_length(extracted_text) > 0
+           ORDER BY created_at DESC LIMIT 1`,
           [userId]
         );
-    if (resumeQ.rows[0]?.analysis) profile = resumeQ.rows[0].analysis as ResumeProfile;
+    const resumeText = String(resumeQ.rows[0]?.extracted_text ?? "").trim();
+    const profile = (resumeQ.rows[0]?.analysis as ResumeProfile | null) ?? null;
+
+    if (!resumeText) {
+      return reply
+        .code(422)
+        .send({ error: "이력서 원문이 필요합니다. 이력서 피드백 메뉴에서 이력서 PDF 를 먼저 업로드해 주세요." });
+    }
 
     // 3) 겨냥한 공고(선택)
     let job: { title: string; company: string | null; summary: string | null } | null = null;
@@ -100,28 +95,96 @@ export async function interviewRoutes(app: FastifyInstance): Promise<void> {
       if (j.rows[0]) job = j.rows[0];
     }
 
-    if (roles.length === 0 && !profile && !job) {
-      return reply
-        .code(422)
-        .send({ error: "질문을 만들 정보가 부족합니다. 직무를 설정하거나 이력서를 분석해 주세요." });
-    }
+    const context = buildContext({ roles, profile, job });
+    const basedOn: AiInterviewBasedOn = {
+      roles,
+      resumeUsed: true,
+      jobTitle: job?.title ?? null,
+    };
 
     try {
-      const raw = await generateJson<any>(buildPrompt({ roles, profile, job, count }), {
-        temperature: 0.5, // 질문은 약간의 다양성 허용
-      });
-      const questions = normalizeQuestions(raw, count);
-      if (questions.length === 0) {
-        return reply.code(502).send({ error: "질문 생성에 실패했습니다. 잠시 후 다시 시도해 주세요." });
-      }
-      const res: InterviewQuestionsResponse = {
-        questions,
-        basedOn: { roles, resumeUsed: !!profile, jobTitle: job?.title ?? null },
+      const started = await startInterview({ resumeText, context, maxQuestions: body.maxQuestions });
+      // 소유권/상태를 DB 에 기록(그래프 상태는 PostgresSaver 가 별도로 보존).
+      await pool.query(
+        `INSERT INTO interview_sessions (id, user_id, status, based_on)
+         VALUES ($1, $2, 'in_progress', $3)`,
+        [started.interviewId, userId, JSON.stringify(basedOn)]
+      );
+      const res: StartAiInterviewResponse = {
+        interviewId: started.interviewId,
+        status: started.status,
+        question: started.question,
+        basedOn,
       };
       return res;
     } catch (err) {
-      req.log.error(err, "면접 질문 생성 실패");
-      return reply.code(503).send({ error: "로컬 AI 응답을 받지 못했습니다. 잠시 후 다시 시도해 주세요." });
+      req.log.error(err, "AI 모의면접 시작 실패");
+      const msg =
+        err instanceof OllamaError
+          ? "로컬 AI 응답을 받지 못했습니다. 잠시 후 다시 시도해 주세요."
+          : "모의면접을 시작하지 못했습니다.";
+      return reply.code(503).send({ error: msg });
     }
+  });
+
+  // ── 답변 제출: 평가 → 꼬리질문/다음질문/리포트 ────────────────────────────
+  app.post<{ Params: { id: string }; Body: AiAnswerRequest }>(
+    "/api/interview/session/:id/answer",
+    async (req, reply) => {
+      const userId = currentUserId(req);
+      if (!userId) return reply.code(401).send({ error: "로그인이 필요합니다." });
+
+      const interviewId = req.params.id;
+      if ((await sessionOwnerId(interviewId)) !== String(userId)) {
+        return reply.code(404).send({ error: "면접 세션을 찾을 수 없습니다." });
+      }
+
+      const answer = String(req.body?.answer ?? "").trim();
+      if (!answer) return reply.code(400).send({ error: "답변(자막)이 비어 있습니다. 말한 내용이 인식되었는지 확인해 주세요." });
+
+      try {
+        const result = await submitAnswer({ interviewId, answer });
+        // 세션 상태 갱신(완료면 completed 로 표시 — 그래프 상태는 PostgresSaver 가 보존).
+        await pool.query(
+          `UPDATE interview_sessions SET status = $2, updated_at = now() WHERE id = $1`,
+          [interviewId, result.status]
+        );
+        const res: AiAnswerResponse = {
+          interviewId: result.interviewId,
+          status: result.status,
+          evaluation: result.evaluation,
+          nextQuestion: result.nextQuestion,
+          finalReport: result.finalReport,
+        };
+        return res;
+      } catch (err) {
+        req.log.error(err, "AI 모의면접 답변 처리 실패");
+        const msg =
+          err instanceof OllamaError
+            ? "로컬 AI 응답을 받지 못했습니다. 잠시 후 다시 시도해 주세요."
+            : "답변 처리에 실패했습니다.";
+        return reply.code(503).send({ error: msg });
+      }
+    }
+  );
+
+  // ── 상태 조회(디버깅/복구용): 현재 질문·진행 정보 ─────────────────────────
+  app.get<{ Params: { id: string } }>("/api/interview/session/:id", async (req, reply) => {
+    const userId = currentUserId(req);
+    if (!userId) return reply.code(401).send({ error: "로그인이 필요합니다." });
+
+    const interviewId = req.params.id;
+    if ((await sessionOwnerId(interviewId)) !== String(userId)) {
+      return reply.code(404).send({ error: "면접 세션을 찾을 수 없습니다." });
+    }
+    const state = await getInterviewState(interviewId);
+    if (!state) return reply.code(404).send({ error: "면접 세션을 찾을 수 없습니다." });
+    return {
+      interviewId,
+      status: state.status,
+      currentQuestion: state.currentQuestion,
+      questionCount: state.questionCount,
+      maxQuestions: state.maxQuestions,
+    };
   });
 }
