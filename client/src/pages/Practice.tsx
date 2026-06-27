@@ -1,17 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import type { InterviewQuestion, PublicUser } from "@e-lifethon/shared";
-import { getInterviewQuestions, saveRecording } from "../api";
+import type {
+  AiAnswerEvaluation,
+  AiFinalReport,
+  AiInterviewBasedOn,
+  AiInterviewQuestion,
+  InterviewReport,
+  PublicUser,
+  Resume,
+} from "@e-lifethon/shared";
+import { getResumes, saveRecording, startAiInterview, submitAiInterviewAnswer } from "../api";
 import AppShell from "../components/AppShell";
 import PageHeader from "../components/PageHeader";
-import {
-  CameraIcon,
-  CameraOffIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  RotateIcon,
-  SparkleIcon,
-} from "../components/icons";
+import { CameraIcon, CameraOffIcon, SparkleIcon } from "../components/icons";
 import "./practice.css";
 
 // 면접 연습: 웹캠으로 내 모습을 녹화하고, 말한 내용을 Web Speech API 로 실시간 자막화한다.
@@ -28,6 +29,13 @@ function fmt(sec: number): string {
   const m = Math.floor(sec / 60);
   const s = sec % 60;
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
+
+// 이력서 선택 드롭다운에 보일 짧은 날짜(YY.MM.DD).
+function fmtResumeDate(iso: string): string {
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${String(d.getFullYear()).slice(2)}.${pad(d.getMonth() + 1)}.${pad(d.getDate())}`;
 }
 
 export function Practice({
@@ -70,27 +78,27 @@ export function Practice({
   const [error, setError] = useState<string | null>(null);
   const [sttSupported] = useState<boolean>(() => getSpeechRecognition() !== null);
 
-  // 면접 예상 질문(로컬 AI 생성)
-  const [questions, setQuestions] = useState<InterviewQuestion[]>([]);
-  const [qIndex, setQIndex] = useState(0);
-  const [qLoading, setQLoading] = useState(false);
-  const [qError, setQError] = useState<string | null>(null);
-
-  const loadQuestions = useCallback(async () => {
-    setQLoading(true);
-    setQError(null);
-    try {
-      const res = await getInterviewQuestions({ count: 8 });
-      setQuestions(res.questions);
-      setQIndex(0);
-    } catch (err) {
-      setQError(err instanceof Error ? err.message : "질문을 불러오지 못했습니다.");
-    } finally {
-      setQLoading(false);
-    }
-  }, []);
-
-  const currentQuestion = questions[qIndex] ?? null;
+  // AI 모의면접(LangGraph 상호작용형) 세션 상태
+  const [interviewId, setInterviewId] = useState<string | null>(null);
+  const [aiQuestion, setAiQuestion] = useState<AiInterviewQuestion | null>(null);
+  const [aiEval, setAiEval] = useState<AiAnswerEvaluation | null>(null); // 방금 답변에 대한 평가
+  const [aiReport, setAiReport] = useState<AiFinalReport | null>(null); // 면접 종료 시 리포트
+  const [aiBasedOn, setAiBasedOn] = useState<AiInterviewBasedOn | null>(null);
+  const [aiBusy, setAiBusy] = useState(false); // 시작/답변 처리 중(LLM 호출)
+  const [aiError, setAiError] = useState<string | null>(null);
+  // 면접 근거로 쓸 이력서 선택(원문이 추출된 것만 후보).
+  const [resumes, setResumes] = useState<Resume[]>([]);
+  const [selectedResumeId, setSelectedResumeId] = useState<number | null>(null);
+  // 면접 볼 직무 선택(회원정보 users.jobs 중 하나). 기본값은 첫 번째 직무.
+  const [selectedRole, setSelectedRole] = useState<string | null>(user.jobs?.[0] ?? null);
+  // 면접 종료 후 녹화에 동봉할 결과 누적(questions[i] ↔ answers[i] ↔ evaluations[i] 정렬).
+  const aiQuestionsRef = useRef<AiInterviewQuestion[]>([]);
+  const aiAnswersRef = useRef<string[]>([]);
+  const aiEvalsRef = useRef<AiAnswerEvaluation[]>([]);
+  // 직전 제출 이후의 자막만 "이번 답변"으로 잘라내기 위한 커서(finalTranscript 의 길이).
+  const answeredUpToRef = useRef<number>(0);
+  // 완성된 리포트(저장용). aiReport 와 같지만 저장 시점 최신값 보장을 위해 ref 로도 보관.
+  const aiReportRef = useRef<AiFinalReport | null>(null);
 
   const transcriptBoxRef = useRef<HTMLDivElement>(null);
 
@@ -99,6 +107,24 @@ export function Practice({
     const el = transcriptBoxRef.current;
     if (el) el.scrollTop = el.scrollHeight;
   }, [finalText, interimText]);
+
+  // 면접 근거로 쓸 이력서 목록 로드(원문이 추출된 것만). 기본값은 가장 최근 것.
+  useEffect(() => {
+    let alive = true;
+    getResumes()
+      .then((list) => {
+        if (!alive) return;
+        const usable = list.filter((r) => r.extracted_chars > 0);
+        setResumes(usable);
+        setSelectedResumeId((cur) => cur ?? usable[0]?.id ?? null);
+      })
+      .catch(() => {
+        /* 목록 실패는 치명적이지 않음 — 시작 시 서버가 최근 이력서로 폴백/안내한다. */
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   // 카메라/마이크 권한 요청 + 미리보기 시작.
   const enableCamera = useCallback(async () => {
@@ -258,6 +284,7 @@ export function Practice({
     chunksRef.current = [];
     finalTranscriptRef.current = "";
     interimRef.current = "";
+    answeredUpToRef.current = 0; // 자막이 초기화되므로 답변 커서도 처음으로
     setFinalText("");
     setInterimText("");
     setRecordedBlob(null);
@@ -313,6 +340,19 @@ export function Practice({
     }
   }, [stopRecognition, flushInterim]);
 
+  // 현재까지의 모의면접 결과를 녹화 저장용 객체로 만든다(없으면 null).
+  const buildInterviewReport = useCallback((): InterviewReport | null => {
+    if (!interviewId || aiAnswersRef.current.length === 0) return null;
+    return {
+      // 답변이 끝난 질문까지만 동봉(아직 답 안 한 마지막 질문은 제외).
+      questions: aiQuestionsRef.current.slice(0, aiAnswersRef.current.length),
+      answers: aiAnswersRef.current,
+      evaluations: aiEvalsRef.current,
+      finalReport: aiReportRef.current,
+      basedOn: aiBasedOn ?? undefined,
+    };
+  }, [interviewId, aiBasedOn]);
+
   // 저장: 영상 + 자막을 서버로 업로드.
   const save = useCallback(async () => {
     if (!recordedBlob) return;
@@ -324,13 +364,14 @@ export function Practice({
         transcript: finalTranscriptRef.current.trim(),
         durationSec: elapsed,
         title: title.trim(),
+        interviewReport: buildInterviewReport(),
       });
       navigate("/history");
     } catch (err) {
       setError(err instanceof Error ? err.message : "저장에 실패했습니다.");
       setPhase("review");
     }
-  }, [recordedBlob, elapsed, title, navigate]);
+  }, [recordedBlob, elapsed, title, navigate, buildInterviewReport]);
 
   // 다시 녹화(리뷰 폐기하고 ready 로).
   const discard = useCallback(() => {
@@ -354,6 +395,77 @@ export function Practice({
     track.enabled = !track.enabled;
     setCameraOn(track.enabled);
   }, []);
+
+  // ── AI 모의면접 ────────────────────────────────────────────────────────────
+  // 시작: 이력서/직무/공고로 첫 질문을 받아 세션을 연다.
+  const startInterviewSession = useCallback(async () => {
+    setAiBusy(true);
+    setAiError(null);
+    setAiEval(null);
+    setAiReport(null);
+    aiReportRef.current = null;
+    try {
+      const res = await startAiInterview({
+        maxQuestions: 5,
+        resumeId: selectedResumeId ?? undefined,
+        role: selectedRole ?? undefined,
+      });
+      setInterviewId(res.interviewId);
+      setAiQuestion(res.question);
+      setAiBasedOn(res.basedOn);
+      // 결과 누적 초기화. 첫 질문을 questions[0] 로 둔다.
+      aiQuestionsRef.current = [res.question];
+      aiAnswersRef.current = [];
+      aiEvalsRef.current = [];
+      // 새 답변 커서는 "지금까지 쌓인 자막 끝"부터(이미 녹화 중이었다면 그 이후 발화만 답변으로 본다).
+      answeredUpToRef.current = finalTranscriptRef.current.length;
+    } catch (err) {
+      setAiError(err instanceof Error ? err.message : "모의면접을 시작하지 못했습니다.");
+    } finally {
+      setAiBusy(false);
+    }
+  }, [selectedResumeId, selectedRole]);
+
+  // 답변 제출: 직전 제출 이후의 자막 구간을 "이번 답변"으로 보내고, 평가+다음 질문을 받는다.
+  const submitCurrentAnswer = useCallback(async () => {
+    if (!interviewId || !aiQuestion) return;
+    // 아직 확정되지 않은 마지막 발화 조각까지 본문에 합친다.
+    flushInterim();
+    const full = finalTranscriptRef.current;
+    const answer = full.slice(answeredUpToRef.current).trim();
+    if (!answer) {
+      setAiError("답변이 인식되지 않았습니다. 말한 내용이 자막에 나타난 뒤 제출해 주세요.");
+      return;
+    }
+    setAiBusy(true);
+    setAiError(null);
+    const prevCursor = answeredUpToRef.current;
+    answeredUpToRef.current = full.length; // 다음 답변은 여기부터
+    const answeredQuestion = aiQuestion;
+    try {
+      const res = await submitAiInterviewAnswer(interviewId, answer);
+      // 결과 누적(정렬 유지): 방금 질문의 답변/평가를 기록.
+      aiAnswersRef.current = [...aiAnswersRef.current, answer];
+      aiEvalsRef.current = [...aiEvalsRef.current, res.evaluation];
+      setAiEval(res.evaluation);
+
+      if (res.status === "completed" && res.finalReport) {
+        setAiReport(res.finalReport);
+        aiReportRef.current = res.finalReport;
+        setAiQuestion(null);
+      } else if (res.nextQuestion) {
+        setAiQuestion(res.nextQuestion);
+        aiQuestionsRef.current = [...aiQuestionsRef.current, res.nextQuestion];
+      }
+    } catch (err) {
+      // 실패 시 커서를 되돌려 같은 답변을 다시 제출할 수 있게 한다.
+      answeredUpToRef.current = prevCursor;
+      setAiQuestion(answeredQuestion);
+      setAiError(err instanceof Error ? err.message : "답변을 처리하지 못했습니다.");
+    } finally {
+      setAiBusy(false);
+    }
+  }, [interviewId, aiQuestion, flushInterim]);
 
   useEffect(() => {
     return () => {
@@ -382,70 +494,172 @@ export function Practice({
       </PageHeader>
 
       {error && <div className="pr-alert">{error}</div>}
+      {aiError && <div className="pr-alert">{aiError}</div>}
 
-      {/* 면접 예상 질문(로컬 AI) — 질문을 보며 답변을 녹화한다 */}
+      {/* AI 모의면접(LangGraph) — 답변(자막)을 평가해 논리를 파고드는 꼬리질문을 이어간다 */}
       <div className="pr-qbar">
-        {currentQuestion ? (
+        {aiQuestion ? (
           <>
             <div className="pr-q-main">
-              <span className="pr-q-cat">{currentQuestion.category}</span>
-              <p className="pr-q-text">{currentQuestion.question}</p>
-              {currentQuestion.intent && (
-                <span className="pr-q-intent">평가 포인트 · {currentQuestion.intent}</span>
+              <span className={`pr-q-cat${aiQuestion.type === "followup" ? " pr-q-cat-follow" : ""}`}>
+                {aiQuestion.type === "followup" ? "🔥 꼬리질문" : `질문 ${aiQuestion.index}`}
+              </span>
+              <p className="pr-q-text">{aiQuestion.question}</p>
+              {aiQuestion.basis && <span className="pr-q-intent">근거 · {aiQuestion.basis}</span>}
+              {/* 직전 답변 평가 요약(논리 공격 지점) */}
+              {aiEval && (
+                <span className="pr-q-evalline">
+                  직전 답변 평가 · 종합 {aiEval.score} / 구체성 {aiEval.specificity} / 역할 {aiEval.roleClarity}
+                  {aiQuestion.type === "followup" && " — 약한 지점을 더 파고듭니다"}
+                </span>
               )}
             </div>
             <div className="pr-q-nav">
               <button
                 type="button"
-                className="pr-q-btn"
-                onClick={() => setQIndex((i) => Math.max(0, i - 1))}
-                disabled={qIndex === 0}
-                aria-label="이전 질문"
+                className="pr-btn pr-btn-primary"
+                onClick={submitCurrentAnswer}
+                disabled={aiBusy || phase !== "recording"}
+                title={phase !== "recording" ? "녹화 중에 답변할 수 있어요." : undefined}
               >
-                <ChevronLeftIcon size={16} />
+                {aiBusy ? "AI 분석 중…" : "답변 완료 → 다음 질문"}
               </button>
               <span className="pr-q-count">
-                {qIndex + 1} / {questions.length}
+                {phase === "recording"
+                  ? "답변을 말한 뒤 버튼을 누르세요"
+                  : "‘녹화 시작’을 누르면 답변할 수 있어요"}
               </span>
-              <button
-                type="button"
-                className="pr-q-btn"
-                onClick={() => setQIndex((i) => Math.min(questions.length - 1, i + 1))}
-                disabled={qIndex >= questions.length - 1}
-                aria-label="다음 질문"
-              >
-                <ChevronRightIcon size={16} />
-              </button>
-              <button
-                type="button"
-                className="pr-btn pr-btn-ghost rs-btn-sm"
-                onClick={loadQuestions}
-                disabled={qLoading}
-              >
-                <RotateIcon size={14} /> {qLoading ? "생성 중…" : "새 질문"}
-              </button>
             </div>
           </>
         ) : (
-          <div className="pr-q-empty">
-            <div>
-              <strong>면접 예상 질문</strong>
+          <div className={`pr-q-empty${aiReport ? "" : " pr-q-empty-start"}`}>
+            <div className="pr-q-intro">
+              <strong>AI 모의면접</strong>
               <span>
-                {qError ??
-                  "내 직무와 분석된 이력서를 바탕으로 로컬 AI 가 예상 질문을 만들어 줍니다."}
+                {aiReport
+                  ? "면접이 종료되었습니다. 아래 리포트를 확인하고, 녹화를 정지해 기록에 저장하세요."
+                  : "고른 이력서와 직무를 바탕으로, 실제 압박면접처럼 답변을 깊게 파고듭니다."}
               </span>
+              {!aiReport && (
+                <div className="pr-q-steps">
+                  <span className="pr-q-step">
+                    <i>1</i> 이력서·직무 기반 질문
+                  </span>
+                  <span className="pr-q-step">
+                    <i>2</i> 답변 자막 실시간 평가
+                  </span>
+                  <span className="pr-q-step">
+                    <i>3</i> 약점 파고드는 꼬리질문
+                  </span>
+                </div>
+              )}
+              {!aiReport && resumes.length === 0 && (
+                <span className="pr-q-resume-warn">
+                  면접에 쓸 이력서가 없습니다. ‘이력서 피드백’에서 이력서 PDF 를 먼저 업로드해 주세요.
+                </span>
+              )}
             </div>
-            <button
-              type="button"
-              className="pr-btn pr-btn-primary"
-              onClick={loadQuestions}
-              disabled={qLoading}
-            >
-              <SparkleIcon size={15} /> {qLoading ? "질문 생성 중…" : "예상 질문 받기"}
-            </button>
+            {!aiReport && (
+              <div className="pr-q-start">
+                {resumes.length > 0 && (
+                  <label className="pr-field">
+                    <span className="pr-field-label">이력서</span>
+                    <div className="pr-select">
+                      <select
+                        value={selectedResumeId ?? ""}
+                        onChange={(e) => setSelectedResumeId(Number(e.target.value) || null)}
+                        disabled={aiBusy}
+                      >
+                        {resumes.map((r) => (
+                          <option key={r.id} value={r.id}>
+                            {r.filename} · {fmtResumeDate(r.created_at)}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </label>
+                )}
+                {user.jobs.length > 1 && (
+                  <label className="pr-field">
+                    <span className="pr-field-label">직무</span>
+                    <div className="pr-select">
+                      <select
+                        value={selectedRole ?? ""}
+                        onChange={(e) => setSelectedRole(e.target.value || null)}
+                        disabled={aiBusy}
+                      >
+                        {user.jobs.map((j) => (
+                          <option key={j} value={j}>
+                            {j}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </label>
+                )}
+                <button
+                  type="button"
+                  className="pr-btn pr-btn-primary pr-q-start-btn"
+                  onClick={startInterviewSession}
+                  disabled={aiBusy}
+                >
+                  <SparkleIcon size={15} /> {aiBusy ? "면접 준비 중…" : "AI 모의면접 시작"}
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
+
+      {/* 최종 리포트(면접 종료 후) */}
+      {aiReport && (
+        <div className="pr-report">
+          <div className="pr-report-head">
+            <SparkleIcon size={16} /> AI 면접 리포트
+          </div>
+          <p className="pr-report-summary">{aiReport.summary}</p>
+          <div className="pr-report-cols">
+            {aiReport.strengths.length > 0 && (
+              <div>
+                <h4>강점</h4>
+                <ul>{aiReport.strengths.map((s, i) => <li key={i}>{s}</li>)}</ul>
+              </div>
+            )}
+            {aiReport.improvements.length > 0 && (
+              <div>
+                <h4>보완점</h4>
+                <ul>{aiReport.improvements.map((s, i) => <li key={i}>{s}</li>)}</ul>
+              </div>
+            )}
+          </div>
+          {aiReport.perAnswerFeedback.length > 0 && (
+            <div className="pr-report-perq">
+              <h4>답변별 피드백</h4>
+              {aiReport.perAnswerFeedback.map((p) => (
+                <div key={p.index} className="pr-report-qrow">
+                  <span className="pr-report-score">{p.score}점</span>
+                  <div>
+                    <p className="pr-report-q">Q{p.index}. {p.question}</p>
+                    <p className="pr-report-fb">{p.feedback}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          {aiReport.expectedQuestions.length > 0 && (
+            <div className="pr-report-perq">
+              <h4>더 준비하면 좋은 예상 질문</h4>
+              <ul>{aiReport.expectedQuestions.map((s, i) => <li key={i}>{s}</li>)}</ul>
+            </div>
+          )}
+          {aiReport.nextSteps.length > 0 && (
+            <div className="pr-report-perq">
+              <h4>다음 면접 준비 조언</h4>
+              <ul>{aiReport.nextSteps.map((s, i) => <li key={i}>{s}</li>)}</ul>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="pr-grid">
         {/* 좌측: 카메라/녹화 영역 */}

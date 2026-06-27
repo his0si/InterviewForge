@@ -98,11 +98,32 @@ export async function initDb(): Promise<void> {
       mime_type     TEXT NOT NULL DEFAULT 'video/webm',
       size_bytes    INTEGER NOT NULL DEFAULT 0,
       video         BYTEA NOT NULL,             -- 영상 원본 바이트
+      interview_report JSONB,                   -- AI 모의면접으로 녹화했을 때의 질문·평가·리포트(아니면 NULL)
       created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
     );
   `);
+  // 기존 DB 마이그레이션: AI 모의면접 결과 컬럼 추가
+  await pool.query(`ALTER TABLE interview_recordings ADD COLUMN IF NOT EXISTS interview_report JSONB;`);
   await pool.query(
     `CREATE INDEX IF NOT EXISTS idx_recordings_user ON interview_recordings(user_id, created_at DESC);`
+  );
+
+  // ── AI 모의면접 세션(소유권/수명) ─────────────────────────────────────────
+  // LangGraph 체크포인트(checkpoints 등)는 PostgresSaver 가 관리하므로 불투명하다.
+  // 이 테이블은 interviewId → 소유자/상태를 인덱싱해 답변·조회 요청을 인가하고 정리하는 용도다.
+  // id 는 LangGraph 의 thread_id(=interviewId)와 동일한 값이다.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS interview_sessions (
+      id          TEXT PRIMARY KEY,                       -- interviewId(=thread_id)
+      user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      status      TEXT NOT NULL DEFAULT 'in_progress',    -- in_progress | completed
+      based_on    JSONB,                                  -- 어떤 이력서/직무/공고로 시작했는지
+      created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+  `);
+  await pool.query(
+    `CREATE INDEX IF NOT EXISTS idx_interview_sessions_user ON interview_sessions(user_id, created_at DESC);`
   );
 
   // ── 이력서 피드백: 업로드한 이력서 PDF 보관 ───────────────────────────────

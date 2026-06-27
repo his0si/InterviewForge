@@ -14,6 +14,7 @@ import { adminRoutes } from "./admin.js";
 import { recordingRoutes } from "./recordings.js";
 import { resumeRoutes } from "./resumes.js";
 import { interviewRoutes } from "./interview.js";
+import { setupInterviewCheckpointer } from "./aiInterview/interviewGraph.js";
 import { startJobEmbeddingWorker } from "./jobEmbeddings.js";
 import { analyzePendingResumes } from "./resumeAnalysis.js";
 
@@ -28,6 +29,8 @@ app.get("/health", async (): Promise<HealthResponse> => ({ ok: true }));
 
 // DB 스키마 보장 + 인증 라우트 등록
 await initDb();
+// AI 모의면접 LangGraph 체크포인트 테이블 생성/마이그레이션(서버 재시작 후에도 면접 재개).
+await setupInterviewCheckpointer();
 await app.register(authRoutes);
 await app.register(jobRoutes);
 await app.register(adminRoutes);

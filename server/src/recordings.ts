@@ -3,7 +3,7 @@
 // - 영상 바이트는 interview_recordings.video(BYTEA)에 그대로 보관한다.
 // - 모든 라우트는 로그인(쿠키 if_token)이 필요하며, 자기 소유 레코드만 접근할 수 있다.
 import type { FastifyInstance } from "fastify";
-import type { InterviewRecording, RecordingsResponse } from "@e-lifethon/shared";
+import type { InterviewRecording, InterviewReport, RecordingsResponse } from "@e-lifethon/shared";
 import { pool } from "./db.js";
 import { currentUserId } from "./auth.js";
 
@@ -11,7 +11,7 @@ import { currentUserId } from "./auth.js";
 const MAX_VIDEO_BYTES = 200 * 1024 * 1024;
 
 // 영상 바이트를 뺀 메타데이터 컬럼(목록/단건 공통).
-const META_COLS = `id, title, transcript, duration_sec, mime_type, size_bytes, created_at`;
+const META_COLS = `id, title, transcript, duration_sec, mime_type, size_bytes, interview_report, created_at`;
 
 function toRecording(row: Record<string, unknown>): InterviewRecording {
   return {
@@ -21,6 +21,8 @@ function toRecording(row: Record<string, unknown>): InterviewRecording {
     duration_sec: row.duration_sec as number,
     mime_type: row.mime_type as string,
     size_bytes: row.size_bytes as number,
+    // JSONB 컬럼은 pg 가 이미 객체로 파싱해 준다(없으면 null).
+    interview_report: (row.interview_report as InterviewReport | null) ?? null,
     created_at: (row.created_at as Date).toISOString(),
   };
 }
@@ -41,6 +43,7 @@ export async function recordingRoutes(app: FastifyInstance): Promise<void> {
     let durationSec = 0;
     let mimeType = "video/webm";
     let video: Buffer | null = null;
+    let interviewReport: unknown = null; // AI 모의면접 결과(JSON 문자열로 전송됨)
 
     // 파트를 순서대로 읽는다. 파일 파트(video)는 버퍼로 모은다.
     for await (const part of req.parts()) {
@@ -57,6 +60,14 @@ export async function recordingRoutes(app: FastifyInstance): Promise<void> {
         if (part.fieldname === "title") title = value.slice(0, 200);
         else if (part.fieldname === "transcript") transcript = value;
         else if (part.fieldname === "duration_sec") durationSec = Math.max(0, Math.floor(Number(value) || 0));
+        else if (part.fieldname === "interview_report") {
+          // 모의면접 결과는 JSON 문자열로 온다. 깨졌으면 조용히 무시(녹화 저장은 계속).
+          try {
+            interviewReport = value ? JSON.parse(value) : null;
+          } catch {
+            interviewReport = null;
+          }
+        }
       }
     }
 
@@ -77,10 +88,19 @@ export async function recordingRoutes(app: FastifyInstance): Promise<void> {
     try {
       const res = await pool.query(
         `INSERT INTO interview_recordings
-           (user_id, title, transcript, duration_sec, mime_type, size_bytes, video)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)
+           (user_id, title, transcript, duration_sec, mime_type, size_bytes, video, interview_report)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
          RETURNING ${META_COLS}`,
-        [userId, title, transcript, durationSec, mimeType, video.length, video]
+        [
+          userId,
+          title,
+          transcript,
+          durationSec,
+          mimeType,
+          video.length,
+          video,
+          interviewReport ? JSON.stringify(interviewReport) : null,
+        ]
       );
       return reply.code(201).send(toRecording(res.rows[0]));
     } catch (err) {

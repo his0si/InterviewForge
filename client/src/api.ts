@@ -1,11 +1,13 @@
 // 인증 API 호출 모음. 모두 같은 출처의 상대경로(/api/...)를 쓴다.
 // credentials: "include" 로 httpOnly 쿠키(if_token)를 주고받는다.
 import type {
+  AiAnswerResponse,
   CrawlSetting,
   CrawlSettingsResponse,
   InterviewRecording,
-  InterviewQuestionsRequest,
-  InterviewQuestionsResponse,
+  InterviewReport,
+  StartAiInterviewRequest,
+  StartAiInterviewResponse,
   JobPosting,
   JobsResponse,
   LoginResponse,
@@ -142,11 +144,14 @@ export async function saveRecording(input: {
   transcript: string;
   durationSec: number;
   title?: string;
+  interviewReport?: InterviewReport | null;
 }): Promise<InterviewRecording> {
   const fd = new FormData();
   fd.append("title", input.title ?? "");
   fd.append("transcript", input.transcript);
   fd.append("duration_sec", String(input.durationSec));
+  // AI 모의면접으로 녹화했으면 결과(질문·평가·리포트)를 JSON 으로 동봉한다.
+  if (input.interviewReport) fd.append("interview_report", JSON.stringify(input.interviewReport));
   // 파일 이름은 서버에서 쓰지 않지만 webm 으로 명시한다.
   fd.append("video", input.video, "interview.webm");
   const res = await fetch("/api/recordings", {
@@ -243,17 +248,34 @@ export async function deleteResume(id: number): Promise<void> {
   }
 }
 
-// ── 면접 예상 질문 ──────────────────────────────────────────────────────────
-export async function getInterviewQuestions(
-  body: InterviewQuestionsRequest = {}
-): Promise<InterviewQuestionsResponse> {
-  const res = await fetch("/api/interview/questions", {
+// ── AI 모의면접 (LangGraph 상호작용형) ──────────────────────────────────────
+// 시작: 이력서/직무/공고로 첫 질문을 받는다.
+export async function startAiInterview(
+  body: StartAiInterviewRequest = {}
+): Promise<StartAiInterviewResponse> {
+  const res = await fetch("/api/interview/session", {
     method: "POST",
     credentials: "include",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),
   });
   const data = await res.json();
-  if (!res.ok) throw new Error(data?.error ?? "면접 질문을 불러오지 못했습니다.");
-  return data as InterviewQuestionsResponse;
+  if (!res.ok) throw new Error(data?.error ?? "모의면접을 시작하지 못했습니다.");
+  return data as StartAiInterviewResponse;
+}
+
+// 답변 제출: 평가 + 다음 질문(꼬리/메인) 또는 최종 리포트를 받는다.
+export async function submitAiInterviewAnswer(
+  interviewId: string,
+  answer: string
+): Promise<AiAnswerResponse> {
+  const res = await fetch(`/api/interview/session/${encodeURIComponent(interviewId)}/answer`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ answer }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data?.error ?? "답변을 처리하지 못했습니다.");
+  return data as AiAnswerResponse;
 }

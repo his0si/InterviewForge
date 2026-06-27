@@ -131,6 +131,7 @@ export interface InterviewRecording {
   mime_type: string; // 예: video/webm
   size_bytes: number; // 영상 파일 크기
   created_at: string; // 생성 시각(ISO)
+  interview_report: InterviewReport | null; // AI 모의면접으로 녹화했을 때의 질문·평가·리포트(아니면 null)
 }
 
 export interface RecordingsResponse {
@@ -191,5 +192,91 @@ export interface InterviewQuestionsResponse {
     resumeUsed: boolean; // 이력서 프로필 반영 여부
     jobTitle: string | null; // 겨냥한 공고 제목(있으면)
   };
+}
+
+// ── AI 모의면접 (LangGraph 상호작용형) ──────────────────────────────────────
+// 이력서 원문 + 직무/공고를 근거로 첫 질문을 만들고, 사용자의 답변(자막)을 평가해
+// 논리를 파고드는 꼬리질문 또는 다음 질문을 이어가며, 끝나면 최종 리포트를 낸다.
+// 서버 server/src/aiInterview 의 LangGraph 엔진 타입과 구조가 1:1 로 대응한다.
+export type AiQuestionType = "main" | "followup"; // 메인 질문 / 직전 답변을 파고드는 꼬리질문
+
+export interface AiInterviewQuestion {
+  index: number; // 누적 질문 번호(1-base, 꼬리질문 포함)
+  type: AiQuestionType;
+  question: string;
+  basis: string; // 이 질문이 근거로 삼은 이력서/공고 상의 경험·요건
+}
+
+export interface AiAnswerEvaluation {
+  questionIndex: number;
+  score: number; // 종합(0-100)
+  specificity: number; // 구체성
+  resumeConsistency: number; // 이력서 일관성
+  problemSolving: number; // 문제 해결력
+  roleClarity: number; // 역할/기여도 명확성
+  structure: number; // 답변 구조
+  resultPresented: boolean; // 성과를 수치/사실로 제시했는지
+  needsFollowup: boolean; // 모델이 본 꼬리질문 필요 여부(참고용)
+  strengths: string[];
+  improvements: string[];
+  rationale: string; // 평가 근거
+}
+
+export interface AiPerAnswerFeedback {
+  index: number;
+  question: string;
+  feedback: string;
+  score: number;
+}
+
+export interface AiFinalReport {
+  summary: string;
+  strengths: string[];
+  improvements: string[];
+  perAnswerFeedback: AiPerAnswerFeedback[];
+  expectedQuestions: string[]; // 더 준비하면 좋은 예상 질문
+  nextSteps: string[]; // 다음 면접 준비 조언
+}
+
+/** 어떤 정보로 면접을 시작했는지(이력서/공고 요약). */
+export interface AiInterviewBasedOn {
+  roles: string[];
+  resumeUsed: boolean;
+  jobTitle: string | null;
+}
+
+export interface StartAiInterviewRequest {
+  resumeId?: number; // 생략 시 가장 최근 분석된 이력서 원문 사용
+  jobId?: number; // 특정 채용 공고를 겨냥할 때
+  role?: string; // 면접 볼 직무(users.jobs 중 하나). 생략 시 등록된 직무 전체를 근거로 사용
+  maxQuestions?: number; // 3~8, 기본 5
+}
+
+export interface StartAiInterviewResponse {
+  interviewId: string;
+  status: "in_progress" | "completed";
+  question: AiInterviewQuestion; // 첫 질문(main)
+  basedOn: AiInterviewBasedOn;
+}
+
+export interface AiAnswerRequest {
+  answer: string; // 자막에서 잘라낸 직전 질문에 대한 답변
+}
+
+export interface AiAnswerResponse {
+  interviewId: string;
+  status: "in_progress" | "completed";
+  evaluation: AiAnswerEvaluation; // 방금 답변에 대한 평가
+  nextQuestion?: AiInterviewQuestion; // 진행 중일 때: 다음 질문(꼬리 또는 메인)
+  finalReport?: AiFinalReport; // 끝났을 때: 최종 리포트
+}
+
+// 면접 기록(녹화)에 함께 저장하는 AI 모의면접 결과. 녹화 업로드 시 JSON 으로 동봉한다.
+export interface InterviewReport {
+  questions: AiInterviewQuestion[]; // 실제로 진행된 질문들(메인+꼬리)
+  answers: string[]; // questions 와 순서가 대응되는 답변(자막)
+  evaluations: AiAnswerEvaluation[]; // 답변별 평가
+  finalReport: AiFinalReport | null; // 최종 리포트(중간 종료면 null)
+  basedOn?: AiInterviewBasedOn; // 어떤 이력서/공고로 시작했는지
 }
 
