@@ -85,7 +85,7 @@ export default function AppShell({
       <div className="app-backdrop" onClick={() => setMobileOpen(false)} aria-hidden />
       <aside className="app-sidebar">
         <div className="app-brand">
-          <div className="if-brand-mark">IF</div>
+          <img className="if-brand-mark" src="/logo-mark.png" alt="InterviewForge" width={34} height={34} />
           <span className="if-brand-title">InterviewForge</span>
         </div>
 
@@ -182,7 +182,7 @@ export default function AppShell({
             <MenuIcon size={22} />
           </button>
           <div className="app-mobile-brand">
-            <div className="if-brand-mark">IF</div>
+            <img className="if-brand-mark" src="/logo-mark.png" alt="InterviewForge" width={32} height={32} />
             <span className="if-brand-title">InterviewForge</span>
           </div>
         </header>

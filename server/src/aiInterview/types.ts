@@ -20,6 +20,17 @@ export interface InterviewQuestion {
   question: string;
   /** 이 질문이 근거로 삼은 resumeText/context 상의 경험·역량·요건. */
   basis: string;
+  /**
+   * 이 질문이 다루는 "이력서 주제"의 식별자(같은 프로젝트/경험 반복 방지용 코드 키).
+   *  - 예: "langgraph", "react", "t-크롤링". 같은 topicKey 메인 질문은 최대 2개까지만 허용.
+   *  - 꼬리질문은 직전 메인 질문의 topicKey 를 물려받고, 주제별 횟수에는 포함하지 않는다.
+   */
+  topicKey: string;
+  /**
+   * 이 질문이 취한 "질문 관점"의 식별자(같은 각도 반복 방지용).
+   *  - 예: "tech-choice", "design-impl". 메인 질문에만 부여(꼬리질문은 비움).
+   */
+  perspectiveKey?: string;
 }
 
 /** 답변 평가(0~100 점수 + 보조 필드). */
@@ -87,6 +98,10 @@ export interface InterviewState {
   evaluations: AnswerEvaluation[];
   /** 지금까지 던진 질문 수(꼬리질문 포함). */
   questionCount: number;
+  /** 주제(topicKey)별 "메인 질문" 횟수. 값이 2 이상이면 소진된 주제로 보고 다음 메인 질문에서 제외. */
+  topicCounts: Record<string, number>;
+  /** 질문 관점(perspectiveKey)별 "메인 질문" 횟수. 값이 2 이상이면 소진된 관점으로 보고 제외. */
+  perspectiveCounts: Record<string, number>;
   /** 최대 질문 수(기본 5). */
   maxQuestions: number;
   /** 면접 종료 시 생성되는 리포트. */

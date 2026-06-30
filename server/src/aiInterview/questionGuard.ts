@@ -50,15 +50,15 @@ function stripKoreanSuffix(token: string): string {
   return token;
 }
 
-type KeywordKind = "latin" | "numeric" | "korean";
-interface Keyword {
+export type KeywordKind = "latin" | "numeric" | "korean";
+export interface Keyword {
   /** 매칭에 쓰는 표면형(latin/numeric 은 원형, korean 은 어간). */
   text: string;
   kind: KeywordKind;
 }
 
-/** question + basis 에서 "검사 대상 핵심 키워드"만 추출한다(일반어 제외). */
-function extractKeywords(text: string): Keyword[] {
+/** question + basis(또는 임의 텍스트)에서 "검사 대상 핵심 키워드"만 추출한다(일반어 제외). */
+export function extractKeywords(text: string): Keyword[] {
   const out: Keyword[] = [];
   const seen = new Set<string>();
   const push = (raw: string, kind: KeywordKind) => {

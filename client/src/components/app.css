@@ -1087,17 +1087,10 @@ body {
 /* 텍스트 워드마크 브랜드 (원본의 로고 이미지 대체) */
 .if-brand-mark {
   flex-shrink: 0;
-  width: 36px;
-  height: 36px;
-  border-radius: 9px;
-  background: #393b54;
-  color: #fff;
-  display: grid;
-  place-content: center;
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  font-weight: 700;
-  font-size: 15px;
-  letter-spacing: -0.5px;
+  width: 34px;
+  height: 34px;
+  display: block;
+  object-fit: contain;
 }
 .app.collapsed .if-brand-mark {
   width: 40px;
