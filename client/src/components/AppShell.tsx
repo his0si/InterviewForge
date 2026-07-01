@@ -4,7 +4,7 @@ import type { PublicUser } from "@e-lifethon/shared";
 import { logout as apiLogout } from "../api";
 import AccountModal from "./AccountModal";
 import {
-  BotIcon,
+  CameraIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   HomeIcon,
@@ -103,7 +103,7 @@ export default function AppShell({
             <span>이력서 피드백</span>
           </NavLink>
           <NavLink to="/practice" className="app-nav-item">
-            <BotIcon />
+            <CameraIcon />
             <span>면접 연습</span>
           </NavLink>
           <NavLink to="/history" className="app-nav-item">

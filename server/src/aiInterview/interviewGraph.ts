@@ -33,6 +33,7 @@ import {
 } from "./interviewLLM.js";
 import type {
   AnswerEvaluation,
+  CompanyAnchor,
   FinalReport,
   InterviewQuestion,
   InterviewStatus,
@@ -57,6 +58,10 @@ const InterviewAnnotation = Annotation.Root({
   interviewId: Annotation<string>({ reducer: last<string>(), default: () => "" }),
   resumeText: Annotation<string>({ reducer: last<string>(), default: () => "" }),
   context: Annotation<string>({ reducer: last<string>(), default: () => "" }),
+  companyAnchor: Annotation<CompanyAnchor | null>({
+    reducer: last<CompanyAnchor | null>(),
+    default: () => null,
+  }),
   currentQuestion: Annotation<InterviewQuestion | null>({
     reducer: last<InterviewQuestion | null>(),
     default: () => null,
@@ -102,6 +107,8 @@ async function generateMainQuestionNode(state: GraphState): Promise<Partial<Grap
   const index = state.questionCount + 1;
   // 주제 카탈로그는 resumeText 만으로 결정되므로 호출 간 안정적이다(같은 주제 키).
   const topics = extractResumeTopics(state.resumeText);
+  // 첫 메인 질문에만 회사 DB 앵커를 적용한다(이후 질문은 기존 로직 그대로).
+  const firstCompanyAnchor = state.questionCount === 0 ? state.companyAnchor ?? undefined : undefined;
   const gen = await generateInterviewQuestion({
     resumeText: state.resumeText,
     context: state.context,
@@ -111,12 +118,14 @@ async function generateMainQuestionNode(state: GraphState): Promise<Partial<Grap
     topics,
     topicCounts: state.topicCounts,
     perspectiveCounts: state.perspectiveCounts,
+    firstCompanyAnchor,
   });
   const question: InterviewQuestion = {
     index,
     type: "main",
     question: gen.question,
-    basis: gen.basis,
+    // 회사 앵커가 있으면 근거를 DB 자료 기반 사전 렌더 문자열로 고정한다(근거에 content_type·공식 항목명·핵심 내용 표시).
+    basis: firstCompanyAnchor ? firstCompanyAnchor.basis : gen.basis,
     topicKey: gen.topicKey,
     perspectiveKey: gen.perspectiveKey,
   };
@@ -294,6 +303,7 @@ export async function startInterview(input: StartInterviewInput): Promise<StartI
   const resumeText = (input?.resumeText ?? "").trim();
   if (!resumeText) throw new Error("resumeText 가 비어 있습니다.");
   const context = (input?.context ?? "").trim();
+  const companyAnchor = input?.companyAnchor ?? null;
   const maxQuestions = clampMax(input?.maxQuestions);
 
   const interviewId = randomUUID();
@@ -305,6 +315,7 @@ export async function startInterview(input: StartInterviewInput): Promise<StartI
       interviewId,
       resumeText,
       context,
+      companyAnchor,
       maxQuestions,
       questionCount: 0,
       topicCounts: {},

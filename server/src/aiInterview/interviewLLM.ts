@@ -26,7 +26,7 @@ import {
   exhaustedPerspectives,
   type QuestionPerspective,
 } from "./questionPerspectives.js";
-import type { AnswerEvaluation, FinalReport, InterviewQuestion } from "./types.js";
+import type { AnswerEvaluation, CompanyAnchor, FinalReport, InterviewQuestion } from "./types.js";
 
 /** mock 모드 여부(모델 없이 그래프만 테스트). */
 export const isMockMode = process.env.INTERVIEW_LLM_MOCK === "1";
@@ -63,6 +63,7 @@ const GROUNDING_RULES = [
   `- 질문 안의 모든 명사(기능·기술·역할·도메인·성과)는 근거 문장(resumeText·지원 직무/공고 또는 answer)을 찾을 수 있어야 한다.`,
   `- 구체적으로 물을 근거가 부족하면, 적힌 사실 범위 안에서 "더 일반적인 질문"으로 후퇴한다(없는 구체 내용을 지어내는 것보다 낫다).`,
   `- basis 에도 지어낸 내용을 넣지 않는다. 반드시 실제로 적힌 문장/내용만 요약한다.`,
+  `- [경험만 질문] 지원자 이름·이메일·전화번호·주소·GitHub/블로그 링크·머리글(직함 표기) 같은 개인정보/헤더는 "경험"이 아니다. 절대 질문 근거로 삼지 말고, resumeText 의 프로젝트/업무/역량 경험만 근거로 한다.`,
 ].join("\n");
 
 // main 질문 전용 지침: resumeText 의 "아직 검증 안 된 새 경험/역량"을, 지원 직무 관점에서 여는 질문.
@@ -241,8 +242,13 @@ export async function generateInterviewQuestion(input: {
   topicCounts: Record<string, number>;
   /** 질문 관점별 "메인 질문" 누적 횟수. 값이 2 이상인 관점은 소진된 것으로 본다. */
   perspectiveCounts: Record<string, number>;
+  /**
+   * 첫 메인 질문을 회사 DB 자료에 근거시키는 앵커(첫 질문에만 전달됨).
+   * 있으면 "회사는 A를 강조합니다. 이와 관련된 본인의 경험은?" 형태로, 회사 자료를 근거로 연다.
+   */
+  firstCompanyAnchor?: CompanyAnchor;
 }): Promise<Required<QuestionGen>> {
-  const { resumeText, context, previousQuestions, previousAnswers, evaluations, topics, topicCounts, perspectiveCounts } =
+  const { resumeText, context, previousQuestions, previousAnswers, evaluations, topics, topicCounts, perspectiveCounts, firstCompanyAnchor } =
     input;
 
   const exhausted = exhaustedTopics(topics, topicCounts);
@@ -255,6 +261,17 @@ export async function generateInterviewQuestion(input: {
   const availablePersp = availablePerspectives(perspectiveCounts);
 
   if (isMockMode) {
+    // 첫 질문 + 회사 앵커가 있으면 회사 자료 기반 결정적 질문(근거는 그래프가 앵커.basis 로 고정).
+    if (firstCompanyAnchor) {
+      const a = firstCompanyAnchor;
+      const question = `[mock] 회사는 ${a.contentTypeLabel} 중 "${a.officialName}"을(를) 강조합니다. 이와 관련된 본인의 경험은 무엇인지 구체적으로 설명해 주세요.`;
+      return {
+        question,
+        basis: a.basis,
+        topicKey: classifyQuestionTopic(question, a.basis, topics),
+        perspectiveKey: classifyQuestionPerspective(question, a.basis),
+      };
+    }
     const pick = unused[0] ?? topics.find((t) => !exhaustedKeys.has(t.key)) ?? topics[0];
     const n = previousQuestions.filter((q) => q.type === "main").length + 1;
     if (pick) {
@@ -280,6 +297,22 @@ export async function generateInterviewQuestion(input: {
   const availablePerspBlock = availablePersp.length
     ? availablePersp.map((p) => `- ${p.label}`).join("\n")
     : "(없음 — 남은 관점이 없다면 가장 덜 쓴 관점을 고른다)";
+
+  // 첫 질문 전용 — 회사 공식 자료를 근거로 여는 지시 블록(있을 때만). 기존 규칙은 그대로 두고 이 지시만 덧붙인다.
+  const firstAnchorBlock = firstCompanyAnchor
+    ? [
+        ``,
+        `[첫 질문 — 회사 공식 자료를 근거로 연다 (이번 질문에서 이 지시가 최우선)]`,
+        `- 이번은 면접의 "첫 main 질문"이다. resumeText 의 프로젝트를 고르는 대신, 아래 "회사 공식 자료"의 핵심을 근거로 질문을 연다.`,
+        `- 반드시 다음 형태로 만든다: "회사는 [회사가 강조/요구하는 것]을 강조합니다. 이와 관련된 본인의 경험은 무엇인가요?"`,
+        `- [혼동 금지] 회사 자료(회사가 요구하는 역량·가치)와 지원자의 이력서 경험을 섞지 않는다. "회사가 요구하는 것"은 아래 회사 자료에서만 가져온다.`,
+        `- [전제 금지] 회사가 강조·요구하는 역량을 지원자가 "이미 수행했다"고 전제하지 않는다. "~을 했을 때"가 아니라 "~와 관련된 본인의 경험이 있는지/무엇인지"를 묻는다.`,
+        `- resumeText 의 특정 성과를 끌어와 회사 자료와 연결짓지 말고, 지원자가 스스로 자신의 경험을 답하도록 질문만 연다.`,
+        `- basis 는 시스템이 회사 자료로 별도로 채우므로 question 텍스트 생성에만 집중한다.`,
+        ``,
+        firstCompanyAnchor.promptMaterial,
+      ]
+    : [];
 
   const buildPrompt = (retryNote: string) => [
     `당신은 한국 기업의 날카로운 면접관입니다. ${TONE}`,
@@ -328,6 +361,7 @@ export async function generateInterviewQuestion(input: {
     ``,
     JSON_RULES,
     `형식: {"question": string, "basis": string}`,
+    ...firstAnchorBlock,
     ``,
     `# resumeText`,
     resumeText,
@@ -340,9 +374,12 @@ export async function generateInterviewQuestion(input: {
 
   // 근거에 실제로 있는 앵커(프로젝트/기술명)가 있으면 fallback 을 그 경험 기반 일반 검증 질문으로 만든다.
   const anchor = pickResumeAnchor(resumeText);
-  const fallbackQuestion = anchor
-    ? `이력서에 적힌 ${anchor} 관련 경험에서 본인이 직접 맡은 역할과 구현 과정에서 어려웠던 점을 구체적으로 설명해 주세요.`
-    : "이력서에 적은 경험 중 가장 자신 있는 프로젝트에서, 본인이 직접 맡은 역할과 해결한 문제를 구체적으로 설명해 주세요.";
+  // 단, 첫 질문에 회사 앵커가 있으면 fallback 도 회사 자료 기반 질문으로 둔다(가드 실패 시에도 회사 근거 유지).
+  const fallbackQuestion = firstCompanyAnchor
+    ? `회사는 ${firstCompanyAnchor.contentTypeLabel} 중 "${firstCompanyAnchor.officialName}"을(를) 강조합니다. 이와 관련된 본인의 경험은 무엇인지 구체적으로 설명해 주세요.`
+    : anchor
+      ? `이력서에 적힌 ${anchor} 관련 경험에서 본인이 직접 맡은 역할과 구현 과정에서 어려웠던 점을 구체적으로 설명해 주세요.`
+      : "이력서에 적은 경험 중 가장 자신 있는 프로젝트에서, 본인이 직접 맡은 역할과 해결한 문제를 구체적으로 설명해 주세요.";
 
   // 1) grounding 가드를 통과한 질문을 받되, 2) "소진된 주제/관점"이면 1회 재생성하고,
   //    3) 그래도 소진되면 아직 안 쓴 주제를 묻는 안전한 질문으로 대체한다.
@@ -352,11 +389,16 @@ export async function generateInterviewQuestion(input: {
       buildPrompt: (groundingNote) =>
         [buildPrompt(groundingNote), ...(retryNote ? ["", retryNote] : [])].join("\n"),
       genOpts: { temperature: 0.5 },
-      sources: [resumeText, context],
+      // 회사 앵커가 있으면 회사 자료 텍스트도 허용 근거에 포함(회사 고유명사가 가드를 통과하도록).
+      sources: [resumeText, context, firstCompanyAnchor?.promptMaterial ?? ""],
       kind: "main",
       fallback: {
         question: fallbackQuestion,
-        basis: anchor ? `resumeText 의 ${anchor} 경험` : "resumeText 기반 경험 검증",
+        basis: firstCompanyAnchor
+          ? firstCompanyAnchor.basis
+          : anchor
+            ? `resumeText 의 ${anchor} 경험`
+            : "resumeText 기반 경험 검증",
       },
     });
     const topicKey = classifyQuestionTopic(qg.question, qg.basis, topics);

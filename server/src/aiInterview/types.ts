@@ -33,6 +33,27 @@ export interface InterviewQuestion {
   perspectiveKey?: string;
 }
 
+/**
+ * 첫 메인 질문을 "회사 DB 자료"에 근거시키기 위한 앵커.
+ *  - companyContextAdapter 가 DB 행에서 결정적으로 만들고, 첫 질문에만 쓰인다.
+ *  - 질문 텍스트는 기존 generateInterviewQuestion 경로로 생성하되, 출력 근거(basis)는
+ *    이 앵커의 사전 렌더 문자열(content_type 표시명·공식 항목명·실제 핵심 내용)을 그대로 쓴다.
+ */
+export interface CompanyAnchor {
+  /** 근거가 된 DB content_type. */
+  contentType: "work_culture" | "official_article" | "external_news";
+  /** content_type 사용자 표시명(예: "공식 일하는 방식(Work Culture)"). */
+  contentTypeLabel: string;
+  /** 공식 항목명(예: "Bar Raising" / 직무명 / 기사 제목). */
+  officialName: string;
+  /** 실제 핵심 내용(설명/행동 기준/요구 역량/요약에서 뽑은 인용문). */
+  coreContent: string;
+  /** 질문 출력에 그대로 쓸 사전 렌더된 근거 문자열. */
+  basis: string;
+  /** 첫 질문 프롬프트에 넣을 회사 자료 텍스트(grounding source 겸용). */
+  promptMaterial: string;
+}
+
 /** 답변 평가(0~100 점수 + 보조 필드). */
 export interface AnswerEvaluation {
   /** 어떤 질문(InterviewQuestion.index)에 대한 평가인지. */
@@ -106,6 +127,8 @@ export interface InterviewState {
   maxQuestions: number;
   /** 면접 종료 시 생성되는 리포트. */
   finalReport: FinalReport | null;
+  /** 첫 메인 질문을 회사 DB 자료에 근거시키는 앵커(없으면 null → 기존 흐름). */
+  companyAnchor: CompanyAnchor | null;
   status: InterviewStatus;
 }
 
@@ -116,6 +139,8 @@ export interface StartInterviewInput {
   resumeText: string;
   /** 지원 직무/공고 요약(선택). 질문 grounding 의 추가 근거로 쓰인다. */
   context?: string;
+  /** 첫 메인 질문을 회사 DB 자료에 근거시키는 앵커(선택). 없으면 기존 resume-only 흐름. */
+  companyAnchor?: CompanyAnchor;
   /** 최대 질문 수(선택, 기본 5). */
   maxQuestions?: number;
 }

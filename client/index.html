@@ -21,9 +21,70 @@
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Plus+Jakarta+Sans:wght@300;500;600;700&display=swap"
     />
+    <!-- 첫 페인트부터 보이는 스플래시(JS 로딩 전에도 표시). 앱이 준비되면 App.tsx 가 제거한다. -->
+    <style>
+      #splash {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 20px;
+        background: #ffffff;
+        font-family: 'Pretendard Variable', Pretendard, system-ui, sans-serif;
+        transition: opacity 0.45s ease, visibility 0.45s ease;
+      }
+      #splash.splash-hide {
+        opacity: 0;
+        visibility: hidden;
+      }
+      #splash .splash-logo {
+        width: 78px;
+        height: 78px;
+        animation: splash-pulse 1.4s ease-in-out infinite;
+      }
+      #splash .splash-name {
+        font-size: 17px;
+        font-weight: 700;
+        letter-spacing: 0.01em;
+        color: #08060d;
+      }
+      #splash .splash-spin {
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
+        border: 3px solid #e5e4e7;
+        border-top-color: #393b54;
+        animation: splash-rot 0.8s linear infinite;
+      }
+      @keyframes splash-pulse {
+        0%, 100% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.08); opacity: 0.7; }
+      }
+      @keyframes splash-rot {
+        to { transform: rotate(360deg); }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #splash .splash-logo, #splash .splash-spin { animation: none; }
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>
+    <div id="splash">
+      <img class="splash-logo" src="/logo-mark.png" alt="InterviewForge" width="78" height="78" />
+      <div class="splash-name">InterviewForge</div>
+      <div class="splash-spin"></div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      // 안전장치: 앱이 어떤 이유로든 스플래시를 못 없애면 일정 시간 뒤 강제로 숨긴다.
+      setTimeout(function () {
+        var s = document.getElementById("splash");
+        if (s) s.classList.add("splash-hide");
+      }, 10000);
+    </script>
   </body>
 </html>

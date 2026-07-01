@@ -84,7 +84,9 @@ function projectSection(resumeText: string): string {
  */
 function dominantAnchor(keywords: Keyword[]): Keyword | null {
   const latin = keywords
-    .filter((k) => k.kind === "latin")
+    // 20자 초과 latin 은 PDF 에서 공백이 뭉개진 이름+직함 헤더("KIMHEESEOFull-stackDeveloper")일
+    // 가능성이 높다. 정상 기술 토큰(React·PostgreSQL 등)은 이보다 짧으므로 앵커에서 제외.
+    .filter((k) => k.kind === "latin" && k.text.length <= 20)
     .sort((a, b) => b.text.length - a.text.length);
   if (latin.length) return latin[0];
   const korean = keywords

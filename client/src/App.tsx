@@ -11,6 +11,14 @@ import { Practice } from "./pages/Practice";
 import { History } from "./pages/History";
 import { ResumeFeedback } from "./pages/ResumeFeedback";
 
+// index.html 의 스플래시를 부드럽게 사라지게 한 뒤 DOM 에서 제거한다.
+function hideSplash() {
+  const el = document.getElementById("splash");
+  if (!el) return;
+  el.classList.add("splash-hide");
+  window.setTimeout(() => el.remove(), 500);
+}
+
 export function App() {
   const [user, setUser] = useState<PublicUser | null>(null);
   const [loading, setLoading] = useState(true);
@@ -19,25 +27,14 @@ export function App() {
   useEffect(() => {
     me()
       .then((res) => setUser(res.user))
-      .finally(() => setLoading(false));
+      .finally(() => {
+        setLoading(false);
+        hideSplash(); // 초기 로딩(번들+인증)이 끝나면 index.html 스플래시 제거
+      });
   }, []);
 
-  if (loading) {
-    return (
-      <div
-        style={{
-          minHeight: "100svh",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          color: "rgba(10,10,10,0.5)",
-          fontFamily: "'Pretendard Variable', Pretendard, system-ui, sans-serif",
-        }}
-      >
-        불러오는 중…
-      </div>
-    );
-  }
+  // 로딩 중에는 index.html 의 스플래시가 화면을 덮고 있으므로 아무것도 그리지 않는다.
+  if (loading) return null;
 
   // 로그인이 필요한 화면 공통 래퍼
   const authed = (node: (u: PublicUser) => React.ReactNode) =>

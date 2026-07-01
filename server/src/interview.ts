@@ -17,8 +17,10 @@ import type {
 } from "@e-lifethon/shared";
 import { pool } from "./db.js";
 import { currentUserId } from "./auth.js";
+import { stripContactInfo } from "./textUtil.js";
 import { OllamaError } from "./ollama.js";
 import { startInterview, submitAnswer, getInterviewState } from "./aiInterview/interviewGraph.js";
+import { buildCompanyContext, enqueueCompanyIngest } from "./aiInterview/companyContextAdapter.js";
 
 // interviewId 의 소유자(user_id)를 interview_sessions 에서 확인한다.
 // 진행 중 세션의 그래프 상태는 PostgresSaver(checkpoints)에, 소유권/상태는 이 테이블에 있다.
@@ -75,7 +77,8 @@ export async function interviewRoutes(app: FastifyInstance): Promise<void> {
            ORDER BY created_at DESC LIMIT 1`,
           [userId]
         );
-    const resumeText = String(resumeQ.rows[0]?.extracted_text ?? "").trim();
+    // 연락처/개인정보(이메일·전화 등)를 제거해 질문 근거로 쓰이지 않게 한다.
+    const resumeText = stripContactInfo(String(resumeQ.rows[0]?.extracted_text ?? "").trim());
     const profile = (resumeQ.rows[0]?.analysis as ResumeProfile | null) ?? null;
 
     if (!resumeText) {
@@ -95,15 +98,42 @@ export async function interviewRoutes(app: FastifyInstance): Promise<void> {
       if (j.rows[0]) job = j.rows[0];
     }
 
-    const context = buildContext({ roles, profile, job });
+    let context = buildContext({ roles, profile, job });
     const basedOn: AiInterviewBasedOn = {
       roles,
       resumeUsed: true,
       jobTitle: job?.title ?? null,
     };
 
+    // 4) 회사 페르소나(선택). 겨냥한 공고의 회사명으로 company_contexts 를 읽어
+    //    첫 질문 앵커 + 회사 참고 context 를 만든다. 데이터 없으면 resume-only 로 안전 fallback.
+    let companyAnchor;
     try {
-      const started = await startInterview({ resumeText, context, maxQuestions: body.maxQuestions });
+      const persona = await buildCompanyContext(
+        job?.company ?? "",
+        body.role ?? roles[0] ?? "",
+        resumeText
+      );
+      companyAnchor = persona.companyAnchor;
+      // 프론트 배지용: 겨냥 회사명 + 페르소나 실제 적용 여부.
+      basedOn.companyName = persona.displayName ?? job?.company ?? null;
+      basedOn.personaApplied = !!persona.companyAnchor;
+      if (persona.context) {
+        // 회사 참고자료를 기존 직무/공고 context 뒤에 덧붙인다(둘 다 grounding 근거).
+        context = context ? `${context}\n\n${persona.context}` : persona.context;
+      }
+      // 회사는 맞는데 수집 데이터가 없으면 JIT 수집 큐에 적재(디바운스). 이번 면접은 이력서 기반으로 진행되고,
+      // 다음 번 면접부터 페르소나가 적용된다. 적재는 면접 응답을 막지 않는다.
+      if (persona.dataMissing && persona.companyKey) {
+        void enqueueCompanyIngest(persona.companyKey, job?.company ?? "");
+      }
+    } catch {
+      // 페르소나 생성 실패는 면접을 막지 않는다(기존 흐름 유지).
+      companyAnchor = undefined;
+    }
+
+    try {
+      const started = await startInterview({ resumeText, context, companyAnchor, maxQuestions: body.maxQuestions });
       // 소유권/상태를 DB 에 기록(그래프 상태는 PostgresSaver 가 별도로 보존).
       await pool.query(
         `INSERT INTO interview_sessions (id, user_id, status, based_on)

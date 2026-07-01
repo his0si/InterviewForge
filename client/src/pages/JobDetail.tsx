@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
 import type { JobPosting, PublicUser } from "@e-lifethon/shared";
 import { getJob } from "../api";
 import AppShell from "../components/AppShell";
+import Splash from "../components/Splash";
 import { CopyIcon, ExternalLinkIcon } from "../components/icons";
 import { jobRole, sourceMeta } from "./sourceMeta";
 import { formatDeadline } from "../format";
@@ -30,6 +31,7 @@ export function JobDetail({
   onLogout: () => void;
 }) {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [job, setJob] = useState<JobPosting | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -51,12 +53,14 @@ export function JobDetail({
     </nav>
   );
 
-  if (loading || !job) {
+  if (loading) return <Splash />;
+
+  if (!job) {
     return (
       <AppShell user={user} onUser={onUser} onLogout={onLogout}>
         {crumbs}
         <div className="tr-detail-card">
-          <p style={{ color: "#888" }}>{loading ? "불러오는 중…" : "공고를 찾을 수 없습니다."}</p>
+          <p style={{ color: "#888" }}>공고를 찾을 수 없습니다.</p>
         </div>
       </AppShell>
     );
@@ -96,7 +100,18 @@ export function JobDetail({
         )}
 
         <div className="tr-detail-actions">
-          <a href={job.source_url} target="_blank" rel="noopener noreferrer" className="tr-btn-primary">
+          <button
+            type="button"
+            className="tr-btn-primary"
+            onClick={() =>
+              navigate("/practice", {
+                state: { jobId: job.id, jobTitle: job.title, company: job.company ?? null },
+              })
+            }
+          >
+            이 공고로 모의면접
+          </button>
+          <a href={job.source_url} target="_blank" rel="noopener noreferrer" className="tr-btn-outline">
             <ExternalLinkIcon size={16} /> 원문 바로가기
           </a>
           <button

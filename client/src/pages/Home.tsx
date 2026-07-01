@@ -8,10 +8,11 @@ import type {
 } from "@e-lifethon/shared";
 import { getRecommendedJobs, getRecordings, getResumes } from "../api";
 import AppShell from "../components/AppShell";
+import Splash from "../components/Splash";
 import { sourceMeta } from "./sourceMeta";
 import { formatDeadline } from "../format";
 import {
-  BotIcon,
+  CameraIcon,
   ExternalLinkIcon,
   SparkleIcon,
 } from "../components/icons";
@@ -49,22 +50,21 @@ export function Home({
   const [recRoles, setRecRoles] = useState<string[]>([]);
   const [recordings, setRecordings] = useState<InterviewRecording[]>([]);
   const [resumes, setResumes] = useState<Resume[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // 각 영역을 독립적으로 로드(하나가 실패해도 나머지는 표시).
-    getRecommendedJobs(10)
-      .then((r) => {
+    // 각 영역을 독립적으로 로드(하나가 실패해도 나머지는 표시). 모두 끝나면 스플래시 해제.
+    Promise.allSettled([
+      getRecommendedJobs(10).then((r) => {
         setRecommended(r.items);
         setRecRoles(r.basedOn.roles);
-      })
-      .catch(() => {});
-    getRecordings()
-      .then(setRecordings)
-      .catch(() => {});
-    getResumes()
-      .then(setResumes)
-      .catch(() => {});
+      }),
+      getRecordings().then(setRecordings),
+      getResumes().then(setResumes),
+    ]).finally(() => setLoading(false));
   }, []);
+
+  if (loading) return <Splash />;
 
   return (
     <AppShell user={user} onUser={onUser} onLogout={onLogout}>
@@ -205,7 +205,7 @@ export function Home({
               연습이 끝나면 면접 기록에 자동 저장돼 다시 볼 수 있어요.
             </p>
             <Link to="/practice" className="pr-btn pr-btn-primary">
-              <BotIcon size={17} /> 녹화 시작하기
+              <CameraIcon size={17} /> 녹화 시작하기
             </Link>
           </div>
         </section>
