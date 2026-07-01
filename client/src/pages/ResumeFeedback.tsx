@@ -11,7 +11,8 @@ import {
 } from "../api";
 import AppShell from "../components/AppShell";
 import PageHeader from "../components/PageHeader";
-import { ExternalLinkIcon, RotateIcon, SparkleIcon, TrashIcon } from "../components/icons";
+import Splash from "../components/Splash";
+import { ChevronDownIcon, ExternalLinkIcon, RotateIcon, SparkleIcon, TrashIcon } from "../components/icons";
 import "./practice.css";
 
 // 이력서 피드백: PDF 업로드 → 로컬 LLM(Ollama)이 원문을 분석해
@@ -247,6 +248,8 @@ export function ResumeFeedback({
     }
   }
 
+  if (loading) return <Splash />;
+
   return (
     <AppShell user={user} onUser={onUser} onLogout={onLogout}>
       <PageHeader title="이력서 피드백">
@@ -288,66 +291,72 @@ export function ResumeFeedback({
       </div>
 
       {/* 업로드한 이력서 목록 */}
-      <div className="dash-card" style={{ marginTop: 20 }}>
-        <div className="dash-card-head">
+      <div className="rs-list-section">
+        <div className="rs-list-head">
           <h2>내 이력서</h2>
           <span className="dash-link">{items.length}개</span>
         </div>
-        {loading ? (
-          <div className="dash-placeholder">불러오는 중…</div>
-        ) : items.length === 0 ? (
+        {items.length === 0 ? (
           <div className="dash-placeholder">아직 올린 이력서가 없습니다. 위에서 PDF 를 올려보세요.</div>
         ) : (
-          <ul className="dash-list">
+          <ul className="acc-list">
             {items.map((r) => {
               const st = STATUS[r.analysis_status];
               const open = openId === r.id;
               return (
-                <li key={r.id} className="rs-item">
-                  <div className="rs-row">
-                    <div className="rs-row-main">
-                      <span className="rs-file-pill">PDF</span>
-                      <div className="rs-row-text">
-                        <a
-                          className="rs-file-name"
-                          href={resumeFileUrl(r.id)}
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          {r.filename}
-                        </a>
-                        <span className="rs-file-meta">
+                <li key={r.id} className={`acc-card${open ? " open" : ""}`}>
+                  <div className="acc-head">
+                    <button
+                      type="button"
+                      className="acc-head-btn"
+                      onClick={() => setOpenId(open ? null : r.id)}
+                    >
+                      <span className="acc-thumb pdf" aria-hidden>
+                        PDF
+                      </span>
+                      <span className="acc-head-text">
+                        <span className="acc-title">{r.filename}</span>
+                        <span className="acc-meta">
                           {fmtDate(r.created_at)} · {fmtSize(r.size_bytes)}
                         </span>
-                      </div>
-                    </div>
-                    <div className="rs-row-actions">
+                      </span>
                       <span className={`dash-chip ${st.cls}`}>{st.label}</span>
-                      <button
-                        type="button"
-                        className="pr-btn pr-btn-ghost rs-btn-sm"
-                        onClick={() => setOpenId(open ? null : r.id)}
-                      >
-                        <SparkleIcon size={14} /> {open ? "닫기" : "분석 보기"}
-                      </button>
-                      <a
-                        className="pr-btn pr-btn-ghost rs-btn-sm"
-                        href={resumeFileUrl(r.id)}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        <ExternalLinkIcon size={14} /> 보기
-                      </a>
-                      <button
-                        type="button"
-                        className="pr-btn pr-btn-danger rs-btn-sm"
-                        onClick={() => onDelete(r.id)}
-                      >
-                        <TrashIcon size={14} /> 삭제
-                      </button>
-                    </div>
+                    </button>
+                    <a
+                      className="acc-act"
+                      href={resumeFileUrl(r.id)}
+                      target="_blank"
+                      rel="noreferrer"
+                      title="원본 PDF 열기"
+                      aria-label="원본 PDF 열기"
+                    >
+                      <ExternalLinkIcon size={15} />
+                    </a>
+                    <button
+                      type="button"
+                      className="acc-act danger"
+                      title="이 이력서 삭제"
+                      aria-label="삭제"
+                      onClick={() => onDelete(r.id)}
+                    >
+                      <TrashIcon size={16} />
+                    </button>
+                    <button
+                      type="button"
+                      className="acc-chev-btn"
+                      onClick={() => setOpenId(open ? null : r.id)}
+                      aria-label={open ? "접기" : "펼치기"}
+                    >
+                      <span className="acc-chev">
+                        <ChevronDownIcon size={16} />
+                      </span>
+                    </button>
                   </div>
-                  {open && <AnalysisPanel r={r} onReanalyze={onReanalyze} />}
+                  {open && (
+                    <div className="acc-body">
+                      <AnalysisPanel r={r} onReanalyze={onReanalyze} />
+                    </div>
+                  )}
                 </li>
               );
             })}

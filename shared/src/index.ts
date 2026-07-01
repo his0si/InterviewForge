@@ -242,7 +242,13 @@ export interface AiFinalReport {
 export interface AiInterviewBasedOn {
   roles: string[];
   resumeUsed: boolean;
+  /** 사용한 이력서 파일명(있으면). 리포트에 "이력서: 파일명" 으로 표시. */
+  resumeName?: string | null;
   jobTitle: string | null;
+  /** 겨냥한 공고의 회사명(없으면 null). */
+  companyName?: string | null;
+  /** 회사 페르소나(회사 DB 자료 기반 첫 질문 앵커)가 실제로 적용됐는지. */
+  personaApplied?: boolean;
 }
 
 export interface StartAiInterviewRequest {
@@ -278,5 +284,55 @@ export interface InterviewReport {
   evaluations: AiAnswerEvaluation[]; // 답변별 평가
   finalReport: AiFinalReport | null; // 최종 리포트(중간 종료면 null)
   basedOn?: AiInterviewBasedOn; // 어떤 이력서/공고로 시작했는지
+  composure?: ComposureReport; // 평정심(압박 대응력) 분석(타이밍+말+영상). 없으면 미측정.
+}
+
+// ── 평정심 점수 리포트 ────────────────────────────────────────────────────
+// 답변 지연·채움말·회피 + 영상(눈 떨림·시선·표정·고개)을 종합해 압박 상황 대응력을 정량화한다.
+// 모든 신호는 브라우저에서 계산되며(영상은 MediaPipe FaceLandmarker), 서버는 이 JSON 을 그대로 보관한다.
+export interface ComposureSubScore {
+  key:
+    | "responseDelay" // 응답 지연(생각하느라 멈춘 시간)
+    | "fluency" // 유창성(채움말·말더듬 적음)
+    | "engagement" // 답변 충실도(회피/짧은답 적음)
+    | "gaze" // 시선 안정(카메라 응시 유지)
+    | "eyeStability" // 눈 안정(눈 떨림·과도한 깜빡임 적음)
+    | "posture"; // 자세 안정(고개 흔들림 적음)
+  label: string; // 사람이 읽는 항목명
+  score: number; // 0~100 (높을수록 안정)
+  detail: string; // 근거 한 줄(측정 수치 기반)
+  measured: boolean; // 실제 측정됐는지(영상/STT 미지원 시 false → 총점에서 제외)
+}
+
+export interface ComposureReport {
+  overall: number; // 0~100 종합 평정심 점수(측정된 항목 가중평균)
+  grade: "안정" | "보통" | "긴장"; // 한눈에 보는 등급
+  subs: ComposureSubScore[]; // 세부 항목
+  metrics: {
+    // 원자료(디버그·상세 표시용). 미측정은 null.
+    avgResponseDelayMs: number | null; // 질문 표시 → 첫 발화까지 평균(ms, 읽는 시간 포함 원값)
+    maxResponseDelayMs: number | null;
+    avgThinkingDelayMs: number | null; // 위에서 '질문 읽는 시간(길이 기반 추정)'을 뺀 순수 생각/머뭇 시간(점수 기준)
+    fillerPerMin: number | null; // 분당 채움말(음/어/그…)
+    fillerCount: number | null;
+    avgAnswerChars: number | null; // 답변 평균 길이(회피 지표)
+    speakingCharsPerSec: number | null; // 발화 속도
+    faceMeasured: boolean; // 얼굴 인식이 됐는지
+    facePresencePct: number | null; // 녹화 중 얼굴이 잡힌 비율
+    blinkPerMin: number | null; // 분당 깜빡임
+    eyeJitter: number | null; // 눈 떨림 지표(0~1, 낮을수록 안정)
+    gazeAwayPct: number | null; // 시선이 정면을 벗어난 비율(0~1)
+    headJitter: number | null; // 고개 흔들림 지표(0~1, 낮을수록 안정)
+    tension: number | null; // 표정 긴장도(0~1, 낮을수록 편안)
+  };
+  perAnswer: {
+    index: number;
+    responseDelayMs: number | null;
+    answerChars: number;
+    fillerCount: number;
+    eyeJitter: number | null;
+    gazeAwayPct: number | null;
+  }[];
+  notes: string[]; // 코칭 코멘트(예: "생각이 길어질 때 눈 깜빡임이 늘어요")
 }
 

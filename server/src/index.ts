@@ -47,13 +47,26 @@ void analyzePendingResumes();
 // 개발 중에는 client/dist 가 없으므로 건너뛰고, Vite 개발 서버(:5173)가 화면을 담당한다.
 const clientDist = join(dirname(fileURLToPath(import.meta.url)), "../../client/dist");
 if (existsSync(clientDist)) {
-  await app.register(fastifyStatic, { root: clientDist });
+  await app.register(fastifyStatic, {
+    root: clientDist,
+    // 해시가 박힌 정적 에셋(/assets/*)은 영구 캐시, SPA 셸(index.html)은 항상 재검증.
+    // → 재배포 후에도 브라우저가 옛 index.html(옛 JS 해시)을 붙들고 있지 않게 한다.
+    setHeaders(res, path) {
+      if (path.endsWith("index.html")) {
+        res.setHeader("Cache-Control", "no-cache");
+      } else if (path.includes("/assets/")) {
+        res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+      }
+    },
+  });
   app.setNotFoundHandler((req, reply) => {
     // /health, /api 등 API 경로는 그대로 404(JSON), 나머지는 SPA 라우팅을 위해 index.html 반환
     const url = req.raw.url ?? "";
     if (url.startsWith("/health") || url.startsWith("/api")) {
       return reply.code(404).send({ error: "not found" });
     }
+    // SPA 폴백으로 내려주는 index.html 도 캐시 금지(항상 최신 셸 → 최신 번들 로드)
+    reply.header("Cache-Control", "no-cache");
     return reply.sendFile("index.html");
   });
 }

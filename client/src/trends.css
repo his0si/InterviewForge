@@ -352,6 +352,8 @@
 }
 
 .tr-reset {
+  flex-shrink: 0;
+  white-space: nowrap;
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -929,6 +931,12 @@
 }
 @media (max-width: 480px) {
   .tr-grid { grid-template-columns: 1fr 1fr; }
+
+  /* 채용 공고 카드: 좁은 화면에서 여백·정렬 정리(제목/메타 줄바꿈) */
+  .tr-post { padding: 13px; gap: 12px; }
+  .tr-post-head { flex-wrap: wrap; }
+  .tr-post-meta { width: 100%; justify-content: flex-start; }
+  .tr-crumbs { flex-wrap: wrap; }
 }
 
 /* ===== 채용 공고(출처 칩/스킬 태그/상세 섹션) ===== */

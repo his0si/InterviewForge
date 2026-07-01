@@ -27,7 +27,7 @@
   flex-wrap: wrap;
 }
 /* 시작 상태: 좌(설명+스텝) ↔ 우(컨트롤 패널), 세로 중앙 정렬로 균형 */
-.pr-q-empty-start { align-items: center; gap: 24px; }
+.pr-q-empty-start { align-items: center; gap: 28px; }
 /* 인트로는 남는 폭을 채우며 자연스럽게 줄바꿈(고정 max-width 로 어중간하게 자르지 않음) */
 .pr-q-intro { display: flex; flex-direction: column; gap: 7px; flex: 1 1 360px; min-width: 0; }
 .pr-q-empty strong { font-size: 15px; font-weight: 700; color: var(--text-h); }
@@ -35,7 +35,42 @@
 .pr-q-resume-warn { margin-top: 2px; color: #c0392b; font-size: 12.5px; }
 
 /* 진행 방식 스텝 칩 — 왼쪽 빈 공간을 채우는 시각 요소 */
-.pr-q-steps { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 3px; }
+/* 모바일 안내 카드(면접 연습은 PC 전용) */
+.pr-mobile-guard {
+  margin-top: 24px;
+  padding: 40px 26px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: #fff;
+  text-align: center;
+}
+.pr-mobile-guard-icon {
+  display: inline-grid;
+  place-content: center;
+  width: 60px;
+  height: 60px;
+  border-radius: 16px;
+  background: var(--accent-bg);
+  border: 1px solid var(--accent-border);
+  color: var(--accent);
+  margin-bottom: 16px;
+}
+.pr-mobile-guard h3 {
+  margin: 0 0 8px;
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--text-h);
+}
+.pr-mobile-guard p {
+  margin: 0 auto;
+  max-width: 320px;
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--text);
+}
+
+/* 모의면접 단계 안내 — 번호(1·2·3) 배지가 붙은 단계 칩 */
+.pr-q-steps { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 8px; }
 .pr-q-step {
   display: inline-flex;
   align-items: center;
@@ -61,18 +96,21 @@
   font-weight: 700;
 }
 
-/* 시작 영역: 이력서/직무 선택 + 시작 버튼 (정렬된 컨트롤 패널) */
+/* 시작 영역: 겨냥공고/이력서/직무 선택 + 시작 버튼 (라벨 정렬 컨트롤 패널) */
 .pr-q-start {
   display: flex;
   flex-direction: column;
-  gap: 9px;
-  min-width: 300px;
+  gap: 8px;
+  width: 380px;
+  max-width: 100%;
 }
 .pr-field { display: flex; align-items: center; gap: 10px; }
 .pr-field-label {
   flex: none;
-  width: 38px;
+  width: 54px;
+  padding-top: 1px;
   text-align: right;
+  white-space: nowrap;
   font-size: 12.5px;
   font-weight: 600;
   color: var(--text);
@@ -93,7 +131,7 @@
 }
 .pr-select select {
   width: 100%;
-  height: 38px;
+  height: 34px;
   padding: 0 32px 0 12px;
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -113,15 +151,15 @@
   box-shadow: 0 0 0 3px var(--accent-bg);
 }
 .pr-select select:disabled { opacity: 0.55; cursor: not-allowed; }
-/* 시작 버튼: 컨트롤 폭에 맞춰 가득 차게 + 한 단계 더 또렷하게 */
+/* 시작 버튼: 컨트롤 폭에 맞춰 가득 차게 */
 .pr-q-start-btn {
   width: 100%;
   justify-content: center;
-  margin-top: 3px;
-  height: 44px;
-  padding: 0 18px;
-  border-radius: 11px;
-  font-size: 14.5px;
+  margin-top: 5px;
+  height: 38px;
+  padding: 0 16px;
+  border-radius: 9px;
+  font-size: 13.5px;
   font-weight: 600;
   letter-spacing: 0.01em;
 }
@@ -312,6 +350,12 @@
   color: #c8c8d2;
 }
 .pr-cam-off svg { color: #8a8a98; }
+.pr-cam-off-note {
+  max-width: 340px;
+  font-size: 12px !important;
+  line-height: 1.55;
+  color: #8f8f9c;
+}
 
 .pr-rec-badge {
   position: absolute;
@@ -339,6 +383,141 @@
 @keyframes pr-pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.3; }
+}
+
+/* ── 녹화 중 실시간 측정값 HUD(영상 위, 투명 글래스모피즘) ── */
+.pr-hud {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 5; /* 카메라 꺼짐 오버레이(.pr-overlay)보다 위 */
+  width: 186px;
+  padding: 11px 12px;
+  border-radius: 13px;
+  /* 배경이 비치도록 낮은 불투명도 + 강한 블러 */
+  background: rgba(18, 16, 30, 0.42);
+  backdrop-filter: blur(16px) saturate(1.2);
+  -webkit-backdrop-filter: blur(16px) saturate(1.2);
+  border: 1px solid rgba(168, 139, 250, 0.28);
+  color: #ececf2;
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.28);
+}
+.pr-hud-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: #b9a7f5;
+  text-transform: uppercase;
+}
+.pr-hud-live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #a78bfa;
+  box-shadow: 0 0 0 0 rgba(167, 139, 250, 0.6);
+  animation: pr-hud-live 1.4s ease-out infinite;
+}
+@keyframes pr-hud-live {
+  0% { box-shadow: 0 0 0 0 rgba(167, 139, 250, 0.5); }
+  100% { box-shadow: 0 0 0 7px rgba(167, 139, 250, 0); }
+}
+
+/* 지표 블록(값 + 그래프) */
+.pr-hud-block { margin-top: 10px; }
+.pr-hud-label {
+  display: block;
+  font-size: 10px;
+  color: #b7b5c8;
+  margin-bottom: 3px;
+}
+.pr-hud-value {
+  font-size: 23px;
+  font-weight: 800;
+  line-height: 1;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+}
+.pr-hud-value em {
+  font-size: 10.5px;
+  font-weight: 600;
+  font-style: normal;
+  color: #9a9ab0;
+  margin-left: 3px;
+}
+
+/* 미니 그래프 */
+.pr-hud-graph {
+  display: block;
+  width: 100%;
+  height: 24px;
+  margin-top: 6px;
+}
+.pr-hud-line { color: #a78bfa; }
+.pr-hud-line polyline {
+  filter: drop-shadow(0 0 3px rgba(167, 139, 250, 0.55));
+}
+.pr-hud-bars-svg rect { fill: #a78bfa; opacity: 0.82; }
+
+.pr-hud-divider {
+  height: 1px;
+  margin: 11px 0 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.14), transparent);
+}
+
+/* 왼쪽 아래 평정심 패널 — 오른쪽 SPEECH 패널과 같은 글래스 스타일 */
+.pr-hud-left {
+  top: auto;
+  right: auto;
+  bottom: 12px;
+  left: 12px;
+  width: 192px;
+}
+
+.pr-hud-bars {
+  margin-top: 9px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.pr-hud-bar-row {
+  display: grid;
+  grid-template-columns: 48px 1fr 22px;
+  align-items: center;
+  gap: 7px;
+}
+.pr-hud-bar-label { font-size: 10px; color: #b6b6c6; }
+.pr-hud-bar-track {
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+}
+.pr-hud-bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.4s ease;
+  background: #a78bfa; /* 보라색으로 통일 */
+  box-shadow: 0 0 6px rgba(167, 139, 250, 0.5);
+}
+.pr-hud-bar-score {
+  text-align: right;
+  font-size: 10px;
+  font-weight: 700;
+  color: #ececf2;
+  font-variant-numeric: tabular-nums;
+}
+.pr-hud-note {
+  margin-top: 9px;
+  font-size: 10px;
+  line-height: 1.5;
+  color: #9a9ab0;
+}
+@media (max-width: 560px) {
+  .pr-hud { width: 168px; padding: 10px; }
 }
 
 /* ── 컨트롤 ── */
@@ -701,7 +880,8 @@
   font-size: 13px;
   color: var(--text);
 }
-.rs-progress-top .pr-live-dot { margin-right: 6px; }
+/* 분석 진행 표시등은 '녹화/에러'가 아니므로 빨강 대신 테마 색으로 */
+.rs-progress-top .pr-live-dot { margin-right: 6px; color: var(--accent); }
 .rs-progress-time { font-variant-numeric: tabular-nums; color: var(--accent); font-weight: 600; }
 .rs-progress-track {
   height: 8px;
@@ -744,13 +924,15 @@
 .rs-profile-val { font-size: 13.5px; color: var(--text-h); }
 .rs-profile-hint { font-size: 11.5px; color: #9a96a3; font-weight: 400; }
 .rs-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+/* 깔끔한 태그 — 테두리·강조색 없이 은은한 회색 배경으로 시선 분산 최소화 */
 .rs-skill-chip {
-  padding: 3px 9px;
-  border-radius: 999px;
-  font-size: 12px;
-  background: var(--accent-bg);
-  border: 1px solid var(--accent-border);
-  color: var(--accent);
+  padding: 4px 10px;
+  border-radius: 7px;
+  font-size: 12.5px;
+  font-weight: 500;
+  background: #f0f0f2;
+  border: none;
+  color: #4a4753;
 }
 
 .rs-feedback {
@@ -837,3 +1019,518 @@
   color: var(--accent);
 }
 .rs-section-label svg { color: var(--accent); }
+
+/* ── 기업 페르소나(겨냥 공고/회사) ─────────────────────────────────────── */
+/* 겨냥 공고 칩: 다른 폼 행과 같은 값 컬럼(flex:1)에 들어가 정렬을 맞춘다. 좌측 얇은 강조바 + 회사/직무 1줄씩. */
+.pr-target-job {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px 6px 11px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: #fafafa;
+}
+.pr-target-info { display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0; }
+.pr-target-company {
+  font-weight: 700;
+  color: var(--text-h);
+  font-size: 12.5px;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pr-target-title {
+  font-size: 11px;
+  color: var(--text);
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pr-target-clear {
+  flex: none;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  opacity: 0.6;
+  border-radius: 6px;
+  padding: 3px 7px;
+  font-size: 11.5px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: opacity 0.15s, background 0.15s;
+}
+.pr-target-clear:hover:not(:disabled) { opacity: 1; background: rgba(0, 0, 0, 0.05); }
+.pr-target-clear:disabled { opacity: 0.4; cursor: not-allowed; }
+/* 공고 미선택 시: 점선 CTA 한 줄(값 컬럼 정렬). */
+.pr-target-pick {
+  flex: 1;
+  min-width: 0;
+  height: 34px;
+  border: 1px dashed var(--accent-border);
+  background: #fff;
+  color: var(--accent);
+  border-radius: 9px;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.pr-target-pick:hover:not(:disabled) { background: var(--accent-bg); border-color: var(--accent); }
+.pr-target-pick:disabled { opacity: 0.55; cursor: not-allowed; }
+
+/* 면접 진행 중 페르소나 배지(사이트 톤: accent 계열). */
+.pr-persona-badge {
+  margin-bottom: 10px;
+  padding: 8px 12px;
+  border-radius: 9px;
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+.pr-persona-badge.on {
+  background: var(--accent-bg);
+  border: 1px solid var(--accent-border);
+  color: var(--accent);
+}
+.pr-persona-badge.off {
+  background: #f8f8fa;
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+/* ── 평정심 점수 리포트 카드 ─────────────────────────────────────────────── */
+.cmp-card {
+  margin-top: 16px;
+  padding: 18px 20px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: #fff;
+}
+.cmp-head-title { font-size: 15px; font-weight: 700; color: var(--text-h); }
+.cmp-head-sub { font-size: 12.5px; color: var(--text); margin-top: 2px; }
+.cmp-top { display: flex; gap: 22px; align-items: center; margin-top: 14px; flex-wrap: wrap; }
+
+/* 종합 점수 원형 배지 */
+.cmp-score {
+  flex: none;
+  width: 118px; height: 118px;
+  border-radius: 50%;
+  display: grid;
+  place-content: center;
+  text-align: center;
+  border: 6px solid var(--accent-border);
+  background: var(--accent-bg);
+}
+.cmp-score.calm { border-color: #34a853; background: #eaf6ee; }
+.cmp-score.mid { border-color: #e6a23c; background: #fdf4e6; }
+.cmp-score.tense { border-color: #d9534f; background: #fbecec; }
+.cmp-score-num { font-size: 34px; font-weight: 800; line-height: 1; color: var(--text-h); }
+.cmp-score-unit { font-size: 12px; color: var(--text); }
+.cmp-score-grade { display: block; margin-top: 4px; font-size: 13px; font-weight: 700; color: var(--text-h); }
+
+/* 세부 항목 막대 */
+.cmp-bars { flex: 1; min-width: 260px; display: flex; flex-direction: column; gap: 9px; list-style: none; margin: 0; padding: 0; }
+.cmp-bar-row {
+  display: grid;
+  grid-template-columns: 108px 1fr 32px;
+  grid-template-areas: "label track score" "detail detail detail";
+  align-items: center;
+  gap: 3px 10px;
+}
+.cmp-bar-label { grid-area: label; font-size: 12.5px; font-weight: 600; color: var(--text-h); }
+.cmp-bar-track { grid-area: track; height: 8px; border-radius: 999px; background: #eee; overflow: hidden; }
+.cmp-bar-fill { display: block; height: 100%; border-radius: 999px; }
+.cmp-bar-fill.good { background: #34a853; }
+.cmp-bar-fill.mid { background: #e6a23c; }
+.cmp-bar-fill.low { background: #d9534f; }
+.cmp-bar-score { grid-area: score; text-align: right; font-size: 12.5px; font-weight: 700; color: var(--text-h); }
+.cmp-bar-detail { grid-area: detail; font-size: 11px; color: var(--text); opacity: 0.85; }
+
+.cmp-notes { margin: 14px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 5px; }
+.cmp-notes li { font-size: 12.5px; line-height: 1.5; color: var(--text); }
+.cmp-unmeasured { margin-top: 12px; font-size: 11.5px; color: var(--text); opacity: 0.75; }
+
+/* ── 답변 단락(질문별 답변 + 원본 자막 정리) ─────────────────────────────── */
+.pr-answer { margin: 4px 0 2px; }
+.pr-answer-tag {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent);
+  background: var(--accent-bg);
+  border: 1px solid var(--accent-border);
+  border-radius: 6px;
+  padding: 1px 7px;
+  margin-bottom: 5px;
+}
+.pr-answer-line {
+  margin: 0 0 4px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text);
+  padding-left: 10px;
+  border-left: 2px solid var(--border);
+}
+.pr-answer-empty { color: #9a96a3; font-style: italic; border-left-color: transparent; padding-left: 0; }
+/* 원본 "답변"(자막) 박스에서는 좌측 바 없이 문단 간격만 준다 */
+.pr-hist-transcript .pr-answer-line { border-left: none; padding-left: 0; margin-bottom: 7px; }
+
+/* ── 아코디언 카드(면접 기록 · 이력서 피드백 공통, 클릭 시 펼침) ──────────── */
+.acc-list { list-style: none; margin: 18px 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.acc-card {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: #fff;
+  overflow: hidden;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.acc-card:hover:not(.open) { border-color: var(--accent-border); }
+.acc-card.open { border-color: var(--accent-border); box-shadow: 0 2px 12px rgba(57, 59, 84, 0.07); }
+.acc-head { display: flex; align-items: center; gap: 6px; padding: 6px 12px 6px 6px; }
+.acc-head-btn {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+}
+.acc-thumb {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: grid;
+  place-content: center;
+  background: var(--accent-bg);
+  color: var(--accent);
+  border: 1px solid var(--accent-border);
+}
+/* PDF 배지 — 업로드 드롭존 아이콘과 동일한 테마 색으로 통일(빨강 제거) */
+.acc-thumb.pdf { background: var(--accent-bg); color: var(--accent); border-color: var(--accent-border); font-size: 10.5px; font-weight: 800; }
+/* 영상 프레임 썸네일 — 정사각 박스를 꽉 채우고(cover) 넘치는 부분만 잘라 레터박스 방지 */
+.acc-thumb-video { display: block; position: relative; padding: 0; overflow: hidden; background: #0d0d0f; border-color: rgba(0, 0, 0, 0.12); }
+.acc-thumb-video video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  pointer-events: none;
+}
+.acc-thumb-overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.28);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.acc-card:hover .acc-thumb-overlay,
+.acc-card.open .acc-thumb-overlay { opacity: 1; }
+.acc-head-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.acc-title { font-size: 14px; font-weight: 700; color: var(--text-h); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.acc-meta { font-size: 12px; color: var(--text); }
+.acc-badge {
+  flex: none;
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--accent-bg);
+  border: 1px solid var(--accent-border);
+  color: var(--accent);
+}
+.acc-chev { flex: none; display: grid; place-content: center; color: #9a96a3; transition: transform 0.2s ease; }
+.acc-card.open .acc-chev { transform: rotate(180deg); }
+.acc-act {
+  flex: none;
+  display: grid;
+  place-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: #9a96a3;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.acc-act:hover { background: rgba(0, 0, 0, 0.05); color: var(--accent); }
+.acc-act.danger:hover { background: rgba(217, 83, 79, 0.1); color: #c0392b; }
+.acc-body { padding: 6px 18px 18px; border-top: 1px solid var(--border); }
+.acc-body .pr-report,
+.acc-body .cmp-card,
+.acc-body .pr-hist-transcript-card { margin-top: 14px; }
+
+/* 셰브론 전용 토글 버튼(맨 오른쪽) */
+.acc-chev-btn {
+  flex: none;
+  display: grid;
+  place-content: center;
+  width: 34px;
+  height: 34px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+}
+.acc-chev-btn:hover .acc-chev { color: var(--accent); }
+
+/* 이력서 목록 섹션: 바깥 카드 박스 없이 헤더 + 카드 리스트만(이중 테두리 제거) */
+.rs-list-section { margin-top: 22px; }
+.rs-list-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 0 4px;
+}
+.rs-list-head h2 { margin: 0; font-size: 15px; font-weight: 700; color: var(--text-h); }
+.rs-list-section .acc-list { margin-top: 10px; }
+
+/* ── 면접 리포트 문서(A4 공식 보고서 형식) ─────────────────────────────── */
+.rep-doc { margin-top: 14px; }
+.rep-toolbar { display: flex; justify-content: flex-end; margin-bottom: 12px; }
+.rep-pdf-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 18px;
+  border-radius: 9px;
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.rep-pdf-btn:hover { opacity: 0.88; }
+
+.rep-page {
+  position: relative;
+  max-width: 840px;
+  margin: 0 auto;
+  padding: 46px 48px 34px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  color: #1a1a1a;
+}
+.rep-tag {
+  position: absolute;
+  top: 30px;
+  right: 34px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #c0392b;
+  border: 1.5px solid #c0392b;
+  border-radius: 0; /* 각진 사각형(도장 느낌) */
+  padding: 4px 9px;
+}
+
+.rep-titleblock { text-align: center; margin-bottom: 30px; }
+.rep-title { margin: 0; font-size: 27px; font-weight: 800; letter-spacing: 0.05em; color: #111; }
+.rep-sub { margin: 8px 0 0; font-size: 13px; color: #7a7a7a; }
+.rep-sub-title { font-size: 12px; color: #a0a0a0; margin-top: 3px; }
+
+.rep-section { margin-top: 28px; }
+.rep-h {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 12px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #111;
+}
+.rep-h3 { margin: 0 0 7px; font-size: 13.5px; font-weight: 700; color: #333; }
+.rep-note-line { margin: -6px 0 12px; font-size: 12px; color: #888; }
+
+/* 종합 요약 / 평정심 상단 배지 + 본문 */
+.rep-overview { display: flex; gap: 22px; align-items: flex-start; }
+.rep-score-badge {
+  flex: none;
+  width: 104px;
+  height: 104px;
+  border-radius: 50%;
+  border: 2.5px solid var(--accent-border);
+  background: var(--accent-bg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  line-height: 1;
+}
+.rep-score-badge.calm { border-color: #34a853; background: #eaf6ee; }
+.rep-score-badge.mid { border-color: #e6a23c; background: #fdf4e6; }
+.rep-score-badge.tense { border-color: #d9534f; background: #fbecec; }
+.rep-score-num { font-size: 38px; font-weight: 800; line-height: 1; color: #111; }
+.rep-score-unit { font-size: 12px; font-weight: 600; color: #999; }
+.rep-overview-body { flex: 1; min-width: 0; }
+.rep-overview-body > p { margin: 0; font-size: 13.5px; line-height: 1.7; color: #333; }
+.rep-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin-top: 12px;
+  font-size: 12.5px;
+  color: #555;
+}
+.rep-meta-row b { color: #111; font-weight: 700; margin-right: 5px; }
+
+/* 표 공통 */
+.rep-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.rep-table th,
+.rep-table td {
+  border: 1px solid #dcdce0;
+  padding: 9px 11px;
+  text-align: left;
+  vertical-align: top;
+}
+.rep-table th { background: #f3f3f6; font-weight: 700; color: #333; font-size: 12.5px; }
+.rep-qnum { width: 46px; text-align: center; font-weight: 700; color: #111; white-space: nowrap; }
+.rep-follow { display: block; margin-top: 4px; font-size: 10.5px; font-weight: 700; color: #c0392b; }
+.rep-cell-score { width: 56px; text-align: center; font-weight: 800; color: #111; font-variant-numeric: tabular-nums; }
+.rep-eval-col { width: 32%; }
+.rep-q { margin: 0 0 8px; font-size: 13px; font-weight: 700; color: #111; line-height: 1.5; }
+.rep-a-line {
+  display: block;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: #444;
+  padding-left: 9px;
+  border-left: 2px solid #e3e3e6;
+  margin-bottom: 3px;
+}
+.rep-a-empty { display: block; font-size: 12.5px; color: #999; font-style: italic; }
+.rep-eval-sub { font-size: 11.5px; font-weight: 700; color: #555; margin-bottom: 5px; }
+.rep-eval-txt { margin: 0; font-size: 12px; line-height: 1.55; color: #555; }
+.rep-cmp-label { font-weight: 600; color: #222; white-space: nowrap; }
+
+/* 강점 / 보완점 */
+.rep-two { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+@media (max-width: 640px) { .rep-two { grid-template-columns: 1fr; } }
+.rep-ul { margin: 10px 0 0; padding-left: 18px; }
+.rep-ul li { font-size: 13px; line-height: 1.65; color: #333; margin-bottom: 4px; }
+.rep-muted { color: #999; }
+.rep-small { font-size: 11.5px; margin-top: 10px; }
+
+/* 평정심 표 안의 미니 막대 */
+.rep-barcol { width: 130px; }
+.rep-barcell { display: flex; align-items: center; gap: 8px; }
+.rep-barcell b { font-size: 12.5px; font-weight: 800; color: #111; font-variant-numeric: tabular-nums; }
+.rep-bar { flex: 1; height: 6px; border-radius: 999px; background: #ececee; overflow: hidden; }
+.rep-bar > span { display: block; height: 100%; border-radius: 999px; }
+.rep-bar-good { background: #34a853; }
+.rep-bar-mid { background: #e6a23c; }
+.rep-bar-low { background: #d9534f; }
+
+.rep-footer {
+  margin-top: 34px;
+  padding-top: 14px;
+  border-top: 1px solid #e3e3e6;
+  text-align: center;
+  font-size: 11px;
+  color: #aaa;
+}
+
+/* 인쇄(브라우저 → PDF로 저장): 리포트 문서(.rep-doc)만 노출.
+   JS 클래스 토글에 의존하지 않고 CSS 로만 격리한다 — 모바일에서 window.print() 가
+   블로킹되지 않아 afterprint 가 일찍 발생해 격리가 풀리던 문제를 없앤다.
+   화면에는 열린 리포트가 하나뿐이므로 .rep-doc 로 특정할 수 있다. */
+@media print {
+  @page { size: A4; margin: 12mm; }
+
+  /* 리포트가 있는 페이지에서만 격리(없으면 일반 인쇄) */
+  body:has(.rep-doc) * { visibility: hidden !important; }
+  body:has(.rep-doc) .rep-doc,
+  body:has(.rep-doc) .rep-doc * { visibility: visible !important; }
+  body:has(.rep-doc) .rep-doc {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+
+  /* 툴바(PDF 버튼) 숨김, 문서 카드 테두리·여백 제거 */
+  .rep-doc .rep-toolbar { display: none !important; }
+  .rep-doc .rep-page {
+    max-width: 100%;
+    margin: 0;
+    padding: 0;
+    border: none;
+    box-shadow: none;
+  }
+
+  /* 모바일 가로 스크롤 래퍼가 인쇄 시 표를 자르지 않도록 원복 */
+  .rep-doc .rep-table-wrap { overflow: visible !important; }
+  .rep-doc .rep-table-wrap .rep-table { min-width: 0 !important; }
+
+  /* 요약/평정심 상단은 인쇄 시 가로 배치 유지(모바일 세로배치 무시) */
+  .rep-doc .rep-overview { flex-direction: row !important; align-items: flex-start !important; }
+
+  .rep-doc .rep-section,
+  .rep-doc .rep-two,
+  .rep-doc .rep-table tr { break-inside: avoid; }
+  .rep-doc * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
+
+/* 넓은 표는 모바일에서 가로 스크롤로 처리(레이아웃 깨짐 방지) */
+.rep-table-wrap { width: 100%; }
+
+/* ── 면접 기록/리포트 반응형(모바일) ── */
+@media (max-width: 720px) {
+  .rep-toolbar { margin-bottom: 10px; }
+  .rep-pdf-btn { width: 100%; justify-content: center; }
+
+  .rep-page { padding: 26px 15px 22px; }
+  .rep-tag { top: 13px; right: 13px; font-size: 10.5px; padding: 3px 7px; }
+  .rep-titleblock { margin-bottom: 22px; }
+  .rep-title { font-size: 21px; letter-spacing: 0.02em; }
+  .rep-sub { font-size: 12px; }
+
+  .rep-section { margin-top: 22px; }
+  .rep-h { font-size: 15px; }
+
+  /* 요약/평정심 상단: 배지 위, 본문 아래로 세로 배치 */
+  .rep-overview { flex-direction: column; gap: 14px; align-items: flex-start; }
+  .rep-overview-body { width: 100%; }
+
+  .rep-two { grid-template-columns: 1fr; gap: 14px; }
+
+  /* 표는 래퍼 안에서 가로 스크롤 */
+  .rep-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .rep-table-wrap .rep-table { min-width: 460px; }
+  .rep-table th, .rep-table td { padding: 7px 8px; font-size: 12px; }
+
+  /* 아코디언(면접 기록 목록) 여백 축소 */
+  .acc-head { padding: 5px 8px 5px 5px; gap: 4px; }
+  .acc-head-btn { gap: 9px; padding: 8px 6px; }
+  .acc-body { padding: 6px 12px 14px; }
+  .acc-badge { padding: 3px 8px; font-size: 11px; }
+}

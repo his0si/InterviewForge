@@ -24,6 +24,7 @@ import {
 } from "@langchain/langgraph";
 import { PostgresSaver } from "@langchain/langgraph-checkpoint-postgres";
 import { pool } from "../db.js";
+import { extractResumeTopics } from "./resumeTopics.js";
 import {
   evaluateInterviewAnswer,
   generateFinalReport,
@@ -32,6 +33,7 @@ import {
 } from "./interviewLLM.js";
 import type {
   AnswerEvaluation,
+  CompanyAnchor,
   FinalReport,
   InterviewQuestion,
   InterviewStatus,
@@ -56,6 +58,10 @@ const InterviewAnnotation = Annotation.Root({
   interviewId: Annotation<string>({ reducer: last<string>(), default: () => "" }),
   resumeText: Annotation<string>({ reducer: last<string>(), default: () => "" }),
   context: Annotation<string>({ reducer: last<string>(), default: () => "" }),
+  companyAnchor: Annotation<CompanyAnchor | null>({
+    reducer: last<CompanyAnchor | null>(),
+    default: () => null,
+  }),
   currentQuestion: Annotation<InterviewQuestion | null>({
     reducer: last<InterviewQuestion | null>(),
     default: () => null,
@@ -74,6 +80,14 @@ const InterviewAnnotation = Annotation.Root({
     default: () => [],
   }),
   questionCount: Annotation<number>({ reducer: last<number>(), default: () => 0 }),
+  topicCounts: Annotation<Record<string, number>>({
+    reducer: last<Record<string, number>>(),
+    default: () => ({}),
+  }),
+  perspectiveCounts: Annotation<Record<string, number>>({
+    reducer: last<Record<string, number>>(),
+    default: () => ({}),
+  }),
   maxQuestions: Annotation<number>({ reducer: last<number>(), default: () => MAX_QUESTIONS }),
   finalReport: Annotation<FinalReport | null>({
     reducer: last<FinalReport | null>(),
@@ -91,18 +105,45 @@ type GraphState = typeof InterviewAnnotation.State;
 /** 메인 질문 생성(첫 질문 포함). 누적 질문 번호를 부여한다. */
 async function generateMainQuestionNode(state: GraphState): Promise<Partial<GraphState>> {
   const index = state.questionCount + 1;
+  // 주제 카탈로그는 resumeText 만으로 결정되므로 호출 간 안정적이다(같은 주제 키).
+  const topics = extractResumeTopics(state.resumeText);
+  // 첫 메인 질문에만 회사 DB 앵커를 적용한다(이후 질문은 기존 로직 그대로).
+  const firstCompanyAnchor = state.questionCount === 0 ? state.companyAnchor ?? undefined : undefined;
   const gen = await generateInterviewQuestion({
     resumeText: state.resumeText,
     context: state.context,
     previousQuestions: state.questionHistory,
     previousAnswers: state.answerHistory,
     evaluations: state.evaluations,
+    topics,
+    topicCounts: state.topicCounts,
+    perspectiveCounts: state.perspectiveCounts,
+    firstCompanyAnchor,
   });
-  const question: InterviewQuestion = { index, type: "main", question: gen.question, basis: gen.basis };
+  const question: InterviewQuestion = {
+    index,
+    type: "main",
+    question: gen.question,
+    // 회사 앵커가 있으면 근거를 DB 자료 기반 사전 렌더 문자열로 고정한다(근거에 content_type·공식 항목명·핵심 내용 표시).
+    basis: firstCompanyAnchor ? firstCompanyAnchor.basis : gen.basis,
+    topicKey: gen.topicKey,
+    perspectiveKey: gen.perspectiveKey,
+  };
+  // 메인 질문만 주제·관점 횟수에 포함한다(꼬리질문은 세지 않는다). 값이 2가 되면 다음부터 제외.
+  const topicCounts = {
+    ...state.topicCounts,
+    [gen.topicKey]: (state.topicCounts[gen.topicKey] ?? 0) + 1,
+  };
+  const perspectiveCounts = {
+    ...state.perspectiveCounts,
+    [gen.perspectiveKey]: (state.perspectiveCounts[gen.perspectiveKey] ?? 0) + 1,
+  };
   return {
     currentQuestion: question,
     questionHistory: [...state.questionHistory, question],
     questionCount: index,
+    topicCounts,
+    perspectiveCounts,
   };
 }
 
@@ -119,7 +160,16 @@ async function generateFollowupQuestionNode(state: GraphState): Promise<Partial<
     answer: prevAnswer,
     evaluation: prevEval,
   });
-  const question: InterviewQuestion = { index, type: "followup", question: gen.question, basis: gen.basis };
+  const question: InterviewQuestion = {
+    index,
+    type: "followup",
+    question: gen.question,
+    basis: gen.basis,
+    // 꼬리질문은 직전 메인 질문과 같은 주제·관점을 더 깊이 파는 것이므로 키를 물려받는다.
+    // (주제·관점별 횟수에는 포함하지 않는다 — 메인 질문만 센다.)
+    topicKey: prevQuestion.topicKey,
+    perspectiveKey: prevQuestion.perspectiveKey,
+  };
   return {
     currentQuestion: question,
     questionHistory: [...state.questionHistory, question],
@@ -253,6 +303,7 @@ export async function startInterview(input: StartInterviewInput): Promise<StartI
   const resumeText = (input?.resumeText ?? "").trim();
   if (!resumeText) throw new Error("resumeText 가 비어 있습니다.");
   const context = (input?.context ?? "").trim();
+  const companyAnchor = input?.companyAnchor ?? null;
   const maxQuestions = clampMax(input?.maxQuestions);
 
   const interviewId = randomUUID();
@@ -264,8 +315,11 @@ export async function startInterview(input: StartInterviewInput): Promise<StartI
       interviewId,
       resumeText,
       context,
+      companyAnchor,
       maxQuestions,
       questionCount: 0,
+      topicCounts: {},
+      perspectiveCounts: {},
       questionHistory: [],
       answerHistory: [],
       evaluations: [],

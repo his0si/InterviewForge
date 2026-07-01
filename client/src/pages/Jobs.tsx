@@ -5,6 +5,7 @@ import { getJobs, getRecommendedJobs } from "../api";
 import AppShell from "../components/AppShell";
 import AdminCrawlPanel from "../components/AdminCrawlPanel";
 import PageHeader from "../components/PageHeader";
+import Splash from "../components/Splash";
 import { ExternalLinkIcon, RotateIcon, SearchIcon } from "../components/icons";
 import { jobRole, sourceMeta } from "./sourceMeta";
 import { formatDeadline } from "../format";
@@ -65,6 +66,7 @@ export function Jobs({
   const [q, setQ] = useState("");
   const [sort, setSort] = useState<"latest" | "recommended">("latest");
   const [loading, setLoading] = useState(true);
+  const [firstLoad, setFirstLoad] = useState(true); // 최초 진입 로딩만 스플래시로 덮는다(필터 재조회는 제외).
 
   useEffect(() => {
     setLoading(true);
@@ -90,7 +92,10 @@ export function Jobs({
           setItems([]);
           setTotal(0);
         })
-        .finally(() => setLoading(false));
+        .finally(() => {
+          setLoading(false);
+          setFirstLoad(false);
+        });
       return;
     }
 
@@ -100,17 +105,16 @@ export function Jobs({
         setTotal(res.total);
         if (res.sources.length) setSources(res.sources);
       })
-      .finally(() => setLoading(false));
+      .finally(() => {
+        setLoading(false);
+        setFirstLoad(false);
+      });
   }, [source, q, sort]);
+
+  if (firstLoad) return <Splash />;
 
   return (
     <AppShell user={user} onUser={onUser} onLogout={onLogout}>
-      <nav className="tr-crumbs" aria-label="경로">
-        <span className="tr-crumb">
-          <span className="current">채용 공고</span>
-        </span>
-      </nav>
-
       <PageHeader title="채용 공고">여러 사이트의 공고를 한곳에서 — 카드를 누르면 상세, 상세에서 원본으로 이동합니다.</PageHeader>
 
       {user.is_admin && <AdminCrawlPanel />}

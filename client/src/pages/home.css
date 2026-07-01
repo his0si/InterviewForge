@@ -170,3 +170,10 @@
 @media (max-width: 860px) {
   .dash-bottom-grid { grid-template-columns: 1fr; }
 }
+
+/* 모바일: 맞춤 추천 공고는 5줄만 노출(스크롤 대신 간결하게) */
+@media (max-width: 720px) {
+  .home-dash .dash-card-accent .dash-list > li:nth-child(n + 6) {
+    display: none;
+  }
+}

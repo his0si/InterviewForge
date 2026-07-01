@@ -137,11 +137,36 @@ export async function recordingRoutes(app: FastifyInstance): Promise<void> {
     if (res.rowCount === 0) return reply.code(404).send({ error: "녹화를 찾을 수 없습니다." });
 
     const { video, mime_type } = res.rows[0];
-    return reply
-      .header("Content-Type", mime_type || "video/webm")
-      .header("Content-Length", (video as Buffer).length)
+    const buf = video as Buffer;
+    const total = buf.length;
+    const type = mime_type || "video/webm";
+
+    reply
+      .header("Content-Type", type)
       .header("Cache-Control", "private, max-age=3600")
-      .send(video);
+      .header("Accept-Ranges", "bytes");
+
+    // Range 요청 지원(썸네일 프레임 추출·탐색 시 부분만 내려받도록 206 응답).
+    const range = req.headers.range;
+    const m = range && /^bytes=(\d*)-(\d*)$/.exec(range);
+    if (m) {
+      let start = m[1] ? parseInt(m[1], 10) : 0;
+      let end = m[2] ? parseInt(m[2], 10) : total - 1;
+      if (Number.isNaN(start) || Number.isNaN(end) || start > end || start >= total) {
+        return reply
+          .code(416)
+          .header("Content-Range", `bytes */${total}`)
+          .send();
+      }
+      end = Math.min(end, total - 1);
+      return reply
+        .code(206)
+        .header("Content-Range", `bytes ${start}-${end}/${total}`)
+        .header("Content-Length", end - start + 1)
+        .send(buf.subarray(start, end + 1));
+    }
+
+    return reply.header("Content-Length", total).send(buf);
   });
 
   // ── 삭제: 자기 소유 녹화 삭제 ─────────────────────────────────────────────
