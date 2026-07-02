@@ -7,6 +7,9 @@ import react from "@vitejs/plugin-react";
 // 공유 머신이라 포트 자동 증가로 남의 영역에 끼지 않도록 strictPort 로 고정한다.
 export default defineConfig({
   plugins: [react()],
+  // 환경변수는 레포 루트의 .env 한 곳에서 관리한다(도커 compose 도 같은 파일을 읽음).
+  // 클라이언트 번들에는 VITE_ 접두사 변수만 노출되므로 서버 시크릿은 새어나가지 않는다.
+  envDir: "..",
   server: {
     port: 5210,
     strictPort: true,

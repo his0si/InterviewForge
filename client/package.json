@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@amplitude/unified": "^1.1.20",
     "@e-lifethon/shared": "*",
     "@mediapipe/tasks-vision": "^0.10.35",
     "react": "^18.3.0",

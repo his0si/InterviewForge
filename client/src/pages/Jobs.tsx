@@ -6,6 +6,7 @@ import AppShell from "../components/AppShell";
 import AdminCrawlPanel from "../components/AdminCrawlPanel";
 import PageHeader from "../components/PageHeader";
 import Splash from "../components/Splash";
+import { Events, track } from "../analytics";
 import { ExternalLinkIcon, RotateIcon, SearchIcon } from "../components/icons";
 import { jobRole, sourceMeta } from "./sourceMeta";
 import { formatDeadline } from "../format";
@@ -111,11 +112,19 @@ export function Jobs({
       });
   }, [source, q, sort]);
 
+  // 검색 트래킹: 키 입력마다가 아니라, 입력이 멈춘 뒤 800ms 후 한 번만 기록(노이즈 방지).
+  useEffect(() => {
+    const term = q.trim();
+    if (!term) return;
+    const t = window.setTimeout(() => track(Events.JOB_SEARCH, { query: term }), 800);
+    return () => clearTimeout(t);
+  }, [q]);
+
   if (firstLoad) return <Splash />;
 
   return (
     <AppShell user={user} onUser={onUser} onLogout={onLogout}>
-      <PageHeader title="채용 공고">여러 사이트의 공고를 한곳에서 — 카드를 누르면 상세, 상세에서 원본으로 이동합니다.</PageHeader>
+      <PageHeader title="채용 공고">여러 채용 사이트의 공고를 한곳에 모았습니다 — 회사·직무로 검색하고 최신순·추천순으로 정렬할 수 있습니다.</PageHeader>
 
       {user.is_admin && <AdminCrawlPanel />}
 
@@ -158,7 +167,11 @@ export function Jobs({
         <button
           type="button"
           className="tr-sort"
-          onClick={() => setSort((s) => (s === "latest" ? "recommended" : "latest"))}
+          onClick={() => {
+            const next = sort === "latest" ? "recommended" : "latest";
+            if (next === "recommended") track(Events.JOB_RECOMMEND_VIEW);
+            setSort(next);
+          }}
           title="정렬 순서 바꾸기"
         >
           {sort === "latest" ? "최신순" : "추천순"}

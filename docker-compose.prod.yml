@@ -6,7 +6,12 @@ name: interviewforge
 
 services:
   web:
-    build: .
+    build:
+      context: .
+      # 클라이언트(Vite) 번들은 빌드 시점에 값이 박히므로 build.args 로 전달해야 한다.
+      # ${...} 는 compose 가 같은 폴더의 .env 에서 채운다.
+      args:
+        VITE_AMPLITUDE_API_KEY: ${VITE_AMPLITUDE_API_KEY}
     container_name: interviewforge
     restart: unless-stopped
     # 컨테이너에서 호스트의 interviewforge Postgres 클러스터(5434)에 닿기 위한 통로.

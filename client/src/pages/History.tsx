@@ -133,7 +133,7 @@ export function History({
   return (
     <AppShell user={user} onUser={onUser} onLogout={onLogout}>
       <PageHeader title="면접 기록">
-        면접 연습에서 녹화한 영상과 실시간 자막을 다시 확인할 수 있습니다.
+        면접 연습에서 녹화한 영상과 실시간 자막은 물론, AI 모의면접 리포트(질문별 평가·강점/보완점·예상 질문)와 평정심 점수를 PDF로 저장할 수 있습니다.
       </PageHeader>
 
       {error && <div className="pr-alert">{error}</div>}

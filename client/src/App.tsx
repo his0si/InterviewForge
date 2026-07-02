@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import type { PublicUser } from "@e-lifethon/shared";
 import { me } from "./api";
+import { identify } from "./analytics";
 import { Login } from "./pages/Login";
 import { Signup } from "./pages/Signup";
 import { Home } from "./pages/Home";
@@ -32,6 +33,12 @@ export function App() {
         hideSplash(); // 초기 로딩(번들+인증)이 끝나면 index.html 스플래시 제거
       });
   }, []);
+
+  // 로그인 사용자를 Amplitude 에 연결(로그아웃 시 null → 익명). user 변경마다 동기화되어
+  // 로그인·회원가입·로그아웃·세션복원 모두 한곳에서 처리된다.
+  useEffect(() => {
+    identify(user?.id ?? null);
+  }, [user]);
 
   // 로딩 중에는 index.html 의 스플래시가 화면을 덮고 있으므로 아무것도 그리지 않는다.
   if (loading) return null;

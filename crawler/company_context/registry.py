@@ -143,6 +143,41 @@ REGISTRY: list[dict[str, Any]] = [
             "prompt_version": "samsung-external-news-v1",
         },
     },
+    {
+        "company_key": "카카오뱅크",   # slugify_company("카카오뱅크") == "카카오뱅크"
+        "display_name": "카카오뱅크",
+        "aliases": ["카카오뱅크", "kakaobank", "kakao bank", "Kakao Bank",
+                    "카뱅"],
+        # work_culture: 카카오뱅크 채용 사이트.
+        #  주의: recruit.kakaobank.com 은 JS 렌더(SPA)라 정적(httpx) 크롤로는 본문이
+        #  거의 안 잡힌다(삼성전자와 동일 상황). 항목 자체는 정확/사용 가능하도록 정식
+        #  URL 을 두고, 엔진이 본문 미발견을 깔끔히 보고한 뒤 다음 소스로 넘어가게 한다.
+        "work_culture": {
+            "url": "https://recruit.kakaobank.com/",
+            "source_name": "카카오뱅크 채용 공식 사이트",
+            "title": "카카오뱅크 인재상·일하는 방식",
+            "selectors": {
+                "culture_hints": [
+                    "인재상", "핵심가치", "조직문화", "기업문화", "일하는 방식",
+                    "value", "culture", "talent", "people", "innovation",
+                    "challenge", "growth", "collaboration", "customer", "trust",
+                ],
+            },
+            "prompt_version": "kakaobank-work-culture-v1",
+        },
+        # official_articles: 카카오뱅크 뉴스룸.
+        #  전용 뉴스룸(newsroom.kakaobank.com)이 응답하지 않고, 인재/문화 전용 정적 태그
+        #  목록이 안정적으로 노출되지 않아 안전하게 None 으로 둔다. 적합한 정적 태그가
+        #  확인되면 sk_hynix 항목과 같은 형태로 채우면 된다.
+        "official_articles": None,
+        # external_news: SK/삼성과 동일 경로(회사명만 다름). 현재 주력 소스.
+        "external_news": {
+            "query": "카카오뱅크",
+            "media": DEFAULT_MEDIA,
+            "subject_keys": ["카카오뱅크", "kakaobank", "kakao bank", "카뱅"],
+            "prompt_version": "kakaobank-external-news-v1",
+        },
+    },
 ]
 
 
