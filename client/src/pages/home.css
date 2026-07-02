@@ -75,6 +75,40 @@
   .home-dash .home-grid-top .dash-news-title {
     margin-top: 2px;
   }
+
+  /* 하단 '이력서 피드백' 카드: 목록이 많아도 카드 높이를 늘리지 않고 카드 안에서만 스크롤.
+     카드 높이는 옆 '면접 연습' CTA 카드가 결정 → 이력서 0개일 때의 위/아래 비율을 항상 유지한다.
+     (목록을 absolute 로 흐름에서 빼 카드의 본질 높이에 기여하지 않게 함) */
+  .home-dash .home-grid-bottom > .dash-card { min-height: 0; }
+  .home-dash .home-grid-bottom .dash-card-head { flex: 0 0 auto; }
+  .home-dash .dash-list-scroll {
+    position: relative;
+    flex: 1 1 0;
+    min-height: 0;
+  }
+  .home-dash .dash-list-scroll .dash-list {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    overflow-y: auto;
+  }
+
+  /* 카드 목록 스크롤바: 평소엔 투명(숨김), 카드에 호버할 때만 표시.
+     스크롤 공간(gutter)은 항상 유지해 호버 시 레이아웃이 밀리지 않게 한다. */
+  .home-dash .dash-list {
+    scrollbar-width: thin;                 /* Firefox */
+    scrollbar-color: transparent transparent;
+  }
+  .home-dash .dash-list::-webkit-scrollbar { width: 8px; }
+  .home-dash .dash-list::-webkit-scrollbar-track { background: transparent; }
+  .home-dash .dash-list::-webkit-scrollbar-thumb {
+    background: transparent;
+    border-radius: 999px;
+  }
+  .home-dash .dash-card:hover .dash-list { scrollbar-color: rgba(60, 60, 80, 0.28) transparent; }
+  .home-dash .dash-card:hover .dash-list::-webkit-scrollbar-thumb {
+    background: rgba(60, 60, 80, 0.28);
+  }
 }
 
 /* 카드 내부 보조 텍스트 */

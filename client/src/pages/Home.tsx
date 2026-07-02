@@ -175,19 +175,21 @@ export function Home({
               </Link>
             </div>
           ) : (
-            <ul className="dash-list">
-              {resumes.slice(0, 5).map((r) => (
-                <li key={r.id} className="dash-memo-row">
-                  <Link to="/resume" className="dash-memo-title home-link">
-                    {r.filename}
-                  </Link>
-                  <span className="dash-memo-author">
-                    {fmtDate(r.created_at)} ·{" "}
-                    {r.feedback ? "피드백 완료" : "피드백 대기 중"}
-                  </span>
-                </li>
-              ))}
-            </ul>
+            <div className="dash-list-scroll">
+              <ul className="dash-list">
+                {resumes.slice(0, 5).map((r) => (
+                  <li key={r.id} className="dash-memo-row">
+                    <Link to="/resume" className="dash-memo-title home-link">
+                      {r.filename}
+                    </Link>
+                    <span className="dash-memo-author">
+                      {fmtDate(r.created_at)} ·{" "}
+                      {r.feedback ? "피드백 완료" : "피드백 대기 중"}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           )}
         </section>
 
