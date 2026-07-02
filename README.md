@@ -37,6 +37,7 @@
 8. [로컬 개발](#로컬-개발)
 9. [배포 절차](#배포-절차)
 10. [환경변수](#환경변수)
+11. [사용자 행동 분석 (Amplitude)](#사용자-행동-분석-amplitude)
 
 ---
 
@@ -424,5 +425,55 @@ cp .env.example .env            # 값 채우기(DB/JWT/SMTP/OLLAMA/도메인)
 | `SMTP_USER` / `SMTP_PASS` / `SMTP_FROM` | Gmail SMTP(앱 비밀번호)로 인증 메일 발송 |
 | `OLLAMA_URL` / `OLLAMA_MODEL` / `OLLAMA_EMBED_MODEL` | 로컬 LLM 엔드포인트·모델(기본값 있음) |
 | `DOMAIN_NAME` / `SSL_EMAIL` | `setup-ssl.sh` 의 ZeroSSL 인증서 발급/갱신 |
+| `VITE_AMPLITUDE_API_KEY` | Amplitude Analytics/Session Replay API 키(클라이언트 빌드 시 주입) — [사용자 행동 분석](#사용자-행동-분석-amplitude) 참고 |
 
 > 앱 포트(8787)는 도커·서버 기본값으로 고정되므로 `.env` 에 둘 필요가 없다.
+>
+> ⚠️ **`VITE_` 접두사 변수는 서버가 아니라 클라이언트(Vite) 빌드 시점에 번들로 박힌다.** 그래서 다른 변수들과 달리 `docker-compose.prod.yml` 의 `environment`(런타임)가 아니라 **`build.args`(빌드타임)** 로 전달되며, `.dockerignore` 가 `.env` 를 빌드 컨텍스트에서 제외하므로 이 경로가 필수다. 값을 바꾸면 반드시 `./deploy.sh`(=`--build`)로 **다시 빌드**해야 반영된다.
+
+---
+
+## 사용자 행동 분석 (Amplitude)
+
+방문자가 어떤 기능(채용 공고·이력서 피드백·모의면접)에 몰리는지, 어디서 이탈하는지를 [Amplitude](https://amplitude.com) 로 측정한다.
+
+### 구성
+
+- **SDK**: `@amplitude/unified`(Analytics + Session Replay 통합). 클라이언트 진입점 [`client/src/main.tsx`](client/src/main.tsx) 에서 **앱 생명주기 동안 딱 한 번** `amplitude.initAll(...)` 로 초기화한다(React 렌더 트리 밖이라 StrictMode 이중호출 영향 없음).
+- **API 키**: `VITE_AMPLITUDE_API_KEY`(위 [환경변수](#환경변수)). 브라우저에 노출되는 public 키이며, 나머지 서버 시크릿은 `VITE_` 접두사가 없어 번들에 포함되지 않는다.
+- **autocapture**: 페이지뷰(SPA 라우트 이동 포함)·클릭·세션·Web Vitals 를 **코드 수정 없이 자동 수집**.
+- **Session Replay**: `sampleRate: 1`(전 세션 녹화).
+- **사용자 식별**: [`client/src/App.tsx`](client/src/App.tsx) 에서 로그인 사용자의 내부 `id` 로 `setUserId` 를 호출(로그아웃 시 익명). 이메일 등 PII 는 보내지 않는다.
+
+### 커스텀 이벤트
+
+autocapture 로는 "버튼 클릭" 수준까지만 구분되므로, 제품 고유 행동은 [`client/src/analytics.ts`](client/src/analytics.ts) 에 이름을 모아 명시적으로 기록한다(`track(Events.XXX, { ... })`).
+
+| 이벤트 이름 | 발생 시점 | 주요 속성 | 코드 위치 |
+|---|---|---|---|
+| `이력서 업로드` | 이력서 PDF 업로드 성공 | `sizeKb` | [ResumeFeedback.tsx](client/src/pages/ResumeFeedback.tsx) |
+| `이력서 재분석` | 분석 다시 실행 | — | [ResumeFeedback.tsx](client/src/pages/ResumeFeedback.tsx) |
+| `공고 상세 조회` | 채용공고 상세 페이지 진입 | `source`, `company`, `jobTitle` | [JobDetail.tsx](client/src/pages/JobDetail.tsx) |
+| `추천공고 조회` | 목록을 추천순으로 전환 | — | [Jobs.tsx](client/src/pages/Jobs.tsx) |
+| `공고 검색` | 검색어 입력(입력 멈춘 뒤 800ms 디바운스) | `query` | [Jobs.tsx](client/src/pages/Jobs.tsx) |
+| `채용공고 원문 클릭` | 공고 상세에서 원문 바로가기 | `source`, `company`, `jobTitle` | [JobDetail.tsx](client/src/pages/JobDetail.tsx) |
+| `모의면접 시작` | AI 모의면접 세션 시작 | `role`, `hasResume`, `fromJob`, `company` | [Practice.tsx](client/src/pages/Practice.tsx) |
+| `면접 답변 제출` | 질문에 답변 제출 | `questionIndex`, `answerChars` | [Practice.tsx](client/src/pages/Practice.tsx) |
+| `모의면접 완료` | 마지막 질문까지 끝 | `totalQuestions` | [Practice.tsx](client/src/pages/Practice.tsx) |
+| `면접 녹화 저장` | 녹화 영상 저장 성공 | `durationSec` | [Practice.tsx](client/src/pages/Practice.tsx) |
+
+이벤트를 추가할 땐 **`analytics.ts` 의 `Events` 에 상수를 먼저 등록**하고(오타로 이벤트가 갈라지는 것 방지) 해당 액션 성공 지점에서 `track()` 을 호출한다.
+
+### 대시보드에서 보는 법
+
+- **라이브 이벤트**(제품 → 라이브 이벤트): 실시간 원본 이벤트 스트림. **트래킹이 되는지 확인**하는 용도. (여기 목록은 즉시 뜨지만 **집계 차트는 색인에 1~2분** 지연될 수 있다. 상단 "실시간 이벤트 업데이트" 토글은 새로고침하면 꺼지는 게 정상.)
+- **"어느 페이지/기능에 몰리나"** 는 원본 스트림이 아니라 **차트로 집계**해서 본다:
+  1. 좌측 상단 `+` → **차트** → **이벤트 세그멘테이션(Event Segmentation)**
+  2. 페이지별: 이벤트 `[Amplitude] Page Viewed` → **Group by** `[Amplitude] Page URL`(또는 Path)
+  3. 커스텀 이벤트(`모의면접 시작` 등)로 바꾸면 기능별 사용량, 속성(`role`·`company` 등)으로 세그먼트 가능
+- **이벤트별 발생 횟수 비교**(어느 이벤트가 제일 많나): 이벤트 세그멘테이션에서 `+ 이벤트 추가`로 **여러 이벤트를 한꺼번에** 넣고, **"다음으로 측정됨: 이벤트 총합"** + 차트 형식 **막대(Bar)** + 기간 **최근 7일**.
+- **퍼널 분석**: `모의면접 시작` → `면접 답변 제출` → `모의면접 완료` → `면접 녹화 저장` 순서로 넣어 **단계별 이탈률**을 본다.
+- **Session Replay**: 개별 세션에서 실제 사용 화면을 다시 보며 이탈 지점을 확인.
+- **AI 에이전트**(좌측 "에이전트"): 자연어로 차트를 만든다. 예: *"최근 7일간 각 커스텀 이벤트의 발생 횟수를 막대그래프로 비교해줘"*, *"모의면접 시작 → 답변 제출 → 완료 → 녹화 저장 퍼널 그려줘"*.
+
+> 💡 반영에 수십 초 지연이 있을 수 있고, 광고/트래킹 차단 확장프로그램이 `api2.amplitude.com` 요청을 막으면 이벤트가 누락된다. 확인 시 시크릿창을 쓰거나 DevTools → Network 에서 `httpapi` 요청이 200 인지(응답의 `events_ingested`) 본다.

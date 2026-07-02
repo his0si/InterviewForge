@@ -1,16 +1,18 @@
-// 로그인/회원가입 좌측 비주얼 카드 (워드마크 + 태그라인). 두 화면이 공유한다.
-// 원본(hansolax)의 사진+로고 자리를 InterviewForge 그라데이션+워드마크로 대체.
+// 로그인/회원가입 좌측 비주얼. 홈 화면 목업 사진(login-hero.png)을 패널 전체 배경으로 깔고,
+// 그 위에 어두운 오버레이 + 로고 + 태그라인을 올린다(CSS .auth-visual). 두 화면이 공유한다.
 export default function AuthVisual() {
   return (
     <div className="auth-visual">
-      <p className="auth-logo">
-        InterviewForge<span className="dot">.</span>
-      </p>
+      <div className="auth-brand">
+        <img className="auth-brand-mark" src="/logo-mark.png" alt="" width={30} height={30} />
+        <span>InterviewForge</span>
+      </div>
+
       <div className="auth-tagline">
         <h2>
-          We simulate the pressure.
+          We simulate the <span className="accent">pressure.</span>
           <br />
-          You master the room.
+          You master the <span className="accent">room.</span>
         </h2>
         <div className="auth-tagline-sub">
           <span className="rule" aria-hidden />

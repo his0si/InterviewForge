@@ -12,6 +12,7 @@ import {
 import AppShell from "../components/AppShell";
 import PageHeader from "../components/PageHeader";
 import Splash from "../components/Splash";
+import { Events, track } from "../analytics";
 import { ChevronDownIcon, ExternalLinkIcon, RotateIcon, SparkleIcon, TrashIcon } from "../components/icons";
 import "./practice.css";
 
@@ -217,6 +218,7 @@ export function ResumeFeedback({
     setError(null);
     try {
       const created = await uploadResume(file);
+      track(Events.RESUME_UPLOAD, { sizeKb: Math.round(file.size / 1024) });
       setItems((prev) => [created, ...prev]);
       setOpenId(created.id); // 업로드 직후 분석 패널을 펼쳐 진행 상태를 보여준다
     } catch (err) {
@@ -240,6 +242,7 @@ export function ResumeFeedback({
   async function onReanalyze(id: number) {
     try {
       await reanalyzeResume(id);
+      track(Events.RESUME_REANALYZE);
       setItems((prev) =>
         prev.map((r) => (r.id === id ? { ...r, analysis_status: "pending" } : r))
       );
@@ -253,7 +256,7 @@ export function ResumeFeedback({
   return (
     <AppShell user={user} onUser={onUser} onLogout={onLogout}>
       <PageHeader title="이력서 피드백">
-        이력서 PDF 를 올리면 로컬 AI 가 직무·기술·강점을 분석하고 면접 관점의 피드백을 드립니다.
+        이력서 PDF 를 올리면 로컬 AI 가 직무·기술·강점을 피드백합니다.
         (모든 분석은 서버 내부에서만 처리되어 외부로 전송되지 않습니다.)
       </PageHeader>
 

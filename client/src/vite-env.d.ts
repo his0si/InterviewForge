@@ -1,5 +1,13 @@
 /// <reference types="vite/client" />
 
+// ── 클라이언트 환경변수 (VITE_ 접두사) ─────────────────────────────────────
+interface ImportMetaEnv {
+  readonly VITE_AMPLITUDE_API_KEY: string;
+}
+interface ImportMeta {
+  readonly env: ImportMetaEnv;
+}
+
 // ── Web Speech API (음성 → 텍스트, 실시간 자막) 타입 선언 ────────────────────
 // 표준 lib.dom 에 아직 포함되지 않은 브라우저 내장 SpeechRecognition 을 쓰기 위한 최소 선언.
 // Chrome/Edge 에서는 webkitSpeechRecognition 으로 제공된다.

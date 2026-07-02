@@ -7,6 +7,7 @@ import type { JobPosting, PublicUser } from "@e-lifethon/shared";
 import { getJob } from "../api";
 import AppShell from "../components/AppShell";
 import Splash from "../components/Splash";
+import { Events, track } from "../analytics";
 import { CopyIcon, ExternalLinkIcon } from "../components/icons";
 import { jobRole, sourceMeta } from "./sourceMeta";
 import { formatDeadline } from "../format";
@@ -38,7 +39,18 @@ export function JobDetail({
   useEffect(() => {
     if (!id) return;
     setLoading(true);
-    getJob(id).then(setJob).finally(() => setLoading(false));
+    getJob(id)
+      .then((j) => {
+        setJob(j);
+        if (j) {
+          track(Events.JOB_DETAIL_VIEW, {
+            source: j.source,
+            company: j.company ?? null,
+            jobTitle: j.title,
+          });
+        }
+      })
+      .finally(() => setLoading(false));
   }, [id]);
 
   const crumbs = (
@@ -111,7 +123,19 @@ export function JobDetail({
           >
             이 공고로 모의면접
           </button>
-          <a href={job.source_url} target="_blank" rel="noopener noreferrer" className="tr-btn-outline">
+          <a
+            href={job.source_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="tr-btn-outline"
+            onClick={() =>
+              track(Events.JOB_SOURCE_CLICK, {
+                source: job.source,
+                company: job.company ?? null,
+                jobTitle: job.title,
+              })
+            }
+          >
             <ExternalLinkIcon size={16} /> 원문 바로가기
           </a>
           <button

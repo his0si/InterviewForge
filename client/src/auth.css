@@ -17,89 +17,76 @@
 /* ---- 좌측 비주얼 ---- */
 .auth-visual {
   position: relative;
-  flex: 0 0 52%;
+  flex: 0 0 56%;
   border-radius: 24px;
   overflow: hidden;
-  /* 원본은 주방 사진. InterviewForge 는 면접/집중을 연상시키는 딥 그라데이션으로 대체. */
+  /* 홈 화면 목업 사진을 패널 전체에 꽉 채운 배경으로 사용하고,
+     그 위에 어두운 그라데이션을 겹쳐(좌상단이 더 진하게) 텍스트 가독성을 확보한다 */
   background:
-    radial-gradient(120% 120% at 0% 0%, #4a3d6b 0%, rgba(74, 61, 107, 0) 55%),
-    radial-gradient(120% 120% at 100% 100%, #2a3b66 0%, rgba(42, 59, 102, 0) 55%),
-    #16171d;
+    linear-gradient(
+      105deg,
+      rgba(15, 14, 24, 0.78) 0%,
+      rgba(15, 14, 24, 0.5) 45%,
+      rgba(15, 14, 24, 0.28) 100%
+    ),
+    url('/login-hero.png') center / cover no-repeat,
+    #14131c;
+  display: flex;
+  flex-direction: column;
+  padding: 44px 46px;
 }
 
-.auth-photo {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-/* 하단으로 갈수록 어두워지는 그라데이션 — 태그라인 가독성 확보 */
-.auth-visual::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(to bottom, rgba(0, 0, 0, 0) 45%, rgba(0, 0, 0, 0.35));
-}
-
-/* 좌상단 워드마크(원본의 로고 이미지 자리) */
-.auth-logo {
-  position: absolute;
-  top: 40px;
-  left: 40px;
-  z-index: 1;
-  margin: 0;
-  font-family: 'Plus Jakarta Sans', sans-serif;
+/* 좌상단 로고(마크 + 워드마크) */
+.auth-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: 'Plus Jakarta Sans', 'Pretendard Variable', sans-serif;
   font-weight: 700;
-  font-size: 26px;
-  letter-spacing: -0.5px;
-  color: #fff;
+  font-size: 22px;
+  letter-spacing: -0.4px;
+  color: #ffffff;
 }
-
-.auth-logo .dot {
-  color: #b69cff;
-}
+.auth-brand-mark { display: block; }
 
 .auth-tagline {
-  position: absolute;
-  left: 40px;
-  bottom: 56px;
-  right: 40px;
-  z-index: 1;
+  /* 브랜드는 상단, 태그라인은 패널 하단으로 밀어 배치한다(참고 디자인) */
+  margin-top: auto;
 }
 
 .auth-tagline h2 {
   margin: 0;
   font-family: 'Plus Jakarta Sans', sans-serif;
-  font-weight: 600;
-  font-size: 60px;
-  line-height: 72px;
-  letter-spacing: -1.2px;
-  color: rgba(255, 255, 255, 0.9);
+  font-weight: 700;
+  font-size: 44px;
+  line-height: 1.18;
+  letter-spacing: -1px;
+  color: #ffffff;
+}
+.auth-tagline h2 .accent {
+  color: #b3a8ff; /* 어두운 배경에 맞춘 밝은 브랜드 퍼플 */
 }
 
 .auth-tagline-sub {
   display: flex;
   align-items: center;
-  gap: 16px;
-  margin-top: 9px;
+  gap: 14px;
+  margin-top: 14px;
 }
 
 .auth-tagline-sub .rule {
-  width: 321px;
-  max-width: 50%;
+  width: 120px;
+  max-width: 40%;
   height: 1px;
-  background: rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.4);
 }
 
 .auth-tagline-sub span {
   font-family: 'Plus Jakarta Sans', sans-serif;
-  font-weight: 300;
-  font-size: 24px;
-  line-height: 30px;
-  letter-spacing: -0.24px;
-  color: rgba(255, 255, 255, 0.9);
+  font-weight: 400;
+  font-size: 16px;
+  letter-spacing: -0.2px;
+  color: rgba(255, 255, 255, 0.82);
   white-space: nowrap;
 }
 
@@ -365,11 +352,10 @@
 /* ---- 반응형 ---- */
 @media (max-width: 1180px) {
   .auth-tagline h2 {
-    font-size: 44px;
-    line-height: 54px;
+    font-size: 36px;
   }
   .auth-tagline-sub span {
-    font-size: 20px;
+    font-size: 15px;
   }
 }
 
@@ -380,28 +366,21 @@
     gap: 12px;
   }
   .auth-visual {
-    flex: 0 0 220px;
-  }
-  .auth-logo {
-    top: 24px;
-    left: 24px;
-    font-size: 22px;
+    flex: 0 0 auto;
+    padding: 24px;
   }
   .auth-tagline {
-    left: 24px;
-    right: 24px;
-    bottom: 28px;
+    margin-top: 22px;
   }
   .auth-tagline h2 {
     font-size: 30px;
-    line-height: 38px;
     letter-spacing: -0.6px;
   }
   .auth-tagline-sub {
-    margin-top: 4px;
+    margin-top: 10px;
   }
   .auth-tagline-sub span {
-    font-size: 15px;
+    font-size: 14px;
   }
   .auth-form {
     padding: 24px 20px 40px;

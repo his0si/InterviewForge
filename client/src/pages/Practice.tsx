@@ -13,6 +13,7 @@ import type {
 import { getResumes, saveRecording, startAiInterview, submitAiInterviewAnswer } from "../api";
 import AppShell from "../components/AppShell";
 import PageHeader from "../components/PageHeader";
+import { Events, track } from "../analytics";
 import { CameraIcon, CameraOffIcon, SparkleIcon } from "../components/icons";
 import type { FaceTracker } from "../composure/faceTracker";
 import { computeComposure, type PerAnswerSignal } from "../composure/score";
@@ -788,6 +789,7 @@ export function Practice({
         title: title.trim(),
         interviewReport: buildInterviewReport(),
       });
+      track(Events.RECORDING_SAVE, { durationSec: elapsed });
       navigate("/history");
     } catch (err) {
       setError(err instanceof Error ? err.message : "저장에 실패했습니다.");
@@ -832,6 +834,12 @@ export function Practice({
         resumeId: selectedResumeId ?? undefined,
         role: selectedRole ?? undefined,
         jobId: targetJob?.id ?? undefined,
+      });
+      track(Events.INTERVIEW_START, {
+        role: selectedRole ?? null,
+        hasResume: selectedResumeId != null,
+        fromJob: targetJob != null,
+        company: targetJob?.company ?? null,
       });
       setInterviewId(res.interviewId);
       setAiQuestion(res.question);
@@ -892,8 +900,13 @@ export function Practice({
       aiAnswersRef.current = [...aiAnswersRef.current, answer];
       aiEvalsRef.current = [...aiEvalsRef.current, res.evaluation];
       setAiEval(res.evaluation);
+      track(Events.INTERVIEW_ANSWER, {
+        questionIndex: answeredQuestion.index,
+        answerChars: contentChars(answer),
+      });
 
       if (res.status === "completed" && res.finalReport) {
+        track(Events.INTERVIEW_COMPLETE, { totalQuestions: aiAnswersRef.current.length });
         setAiReport(res.finalReport);
         aiReportRef.current = res.finalReport;
         setAiQuestion(null);
@@ -952,7 +965,7 @@ export function Practice({
     return (
       <AppShell user={user} onUser={onUser} onLogout={onLogout}>
         <PageHeader title="면접 연습">
-          녹화 버튼을 누르면 내 모습이 녹화되고, 말한 내용이 실시간으로 자막에 표시됩니다.
+          이력서와 겨냥 공고를 바탕으로 AI 가 실제 압박면접처럼 질문하고, 실시간으로 평가해 약점을 파고드는 꼬리질문을 이어갑니다.
         </PageHeader>
         <div className="pr-mobile-guard">
           <span className="pr-mobile-guard-icon">
@@ -971,8 +984,7 @@ export function Practice({
   return (
     <AppShell user={user} onUser={onUser} onLogout={onLogout}>
       <PageHeader title="면접 연습">
-        녹화 버튼을 누르면 내 모습이 녹화되고, 말한 내용이 실시간으로 자막에 표시됩니다.
-        정지하면 영상과 자막이 면접 기록에 저장됩니다.
+        이력서와 겨냥 공고를 바탕으로 AI 가 실제 압박면접처럼 질문하고, 실시간으로 평가해 약점을 파고드는 꼬리질문을 이어갑니다.
       </PageHeader>
 
       {error && <div className="pr-alert">{error}</div>}

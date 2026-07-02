@@ -12,6 +12,14 @@ RUN npm ci
 
 # 소스 복사 후 전체 빌드 (shared → server → client)
 COPY . .
+
+# 클라이언트(Vite) 빌드에 주입할 값. .env 는 .dockerignore 로 빌드 컨텍스트에서 제외되므로
+# compose 의 build.args 로 전달받아 빌드 스테이지 환경변수로 노출한다.
+# Vite 는 process.env 의 VITE_ 접두사 변수를 번들에 포함하며, 이 ENV 는 build 스테이지에만 남고
+# 런타임 이미지로는 넘어가지 않는다(정적 번들 안에만 값이 박힘).
+ARG VITE_AMPLITUDE_API_KEY
+ENV VITE_AMPLITUDE_API_KEY=$VITE_AMPLITUDE_API_KEY
+
 RUN npm run build
 
 # 런타임에 필요 없는 devDependencies 제거
