@@ -2,6 +2,30 @@
 
 https://github.com/user-attachments/assets/5f73ff5a-98d5-4803-b104-9da5d76dfdaa
 
+<img width="2550" height="1435" alt="ForgeLab-이미지-0" src="https://github.com/user-attachments/assets/f1dc135e-6cc9-4aab-ad94-11968caf1940" />
+<img width="2550" height="1435" alt="ForgeLab-이미지-1" src="https://github.com/user-attachments/assets/a65a072b-9c6f-4043-a94b-91f6fdc576bb" />
+<img width="2550" height="1435" alt="ForgeLab-이미지-2" src="https://github.com/user-attachments/assets/d2235ba7-8630-4439-8baa-097ad9be01e8" />
+<img width="2550" height="1435" alt="ForgeLab-이미지-3" src="https://github.com/user-attachments/assets/a168c7fa-d30b-4de3-aea2-082258cb30f3" />
+<img width="2550" height="1435" alt="ForgeLab-이미지-4" src="https://github.com/user-attachments/assets/f4f46d98-4bfd-485c-88c7-224b394c85d4" />
+<img width="2550" height="1435" alt="ForgeLab-이미지-5" src="https://github.com/user-attachments/assets/15564955-20f5-4e3f-a244-8745b57594ae" />
+<img width="2550" height="1435" alt="ForgeLab-이미지-6" src="https://github.com/user-attachments/assets/2d606f57-7c8e-4b43-9715-f21f67ee9b4e" />
+<img width="2550" height="1435" alt="ForgeLab-이미지-7" src="https://github.com/user-attachments/assets/72f1107b-6e80-461c-b7bb-95e7b1f0d84b" />
+<img width="2550" height="1435" alt="ForgeLab-이미지-8" src="https://github.com/user-attachments/assets/bc37e67c-091a-4ef4-8cd6-d6748944581a" />
+<img width="2550" height="1435" alt="ForgeLab-이미지-9" src="https://github.com/user-attachments/assets/d6456183-347c-4646-a451-1ead59c0c7c7" />
+<img width="2550" height="1435" alt="ForgeLab-이미지-10" src="https://github.com/user-attachments/assets/b52f702a-9051-4883-86d4-675bdee95458" />
+<img width="2550" height="1435" alt="ForgeLab-이미지-11" src="https://github.com/user-attachments/assets/ec124d8e-4f27-4fb2-a345-7bfc73cf717e" />
+<img width="2550" height="1435" alt="ForgeLab-이미지-12" src="https://github.com/user-attachments/assets/e3cf81cc-fca6-4895-b75b-3847043ee0b8" />
+<img width="2550" height="1435" alt="ForgeLab-이미지-13" src="https://github.com/user-attachments/assets/6fd6e13b-a229-4dc9-bca3-c5f58dfb07c6" />
+<img width="2550" height="1435" alt="ForgeLab-이미지-14" src="https://github.com/user-attachments/assets/92721084-b2a2-4f57-8ccc-8f4727490808" />
+<img width="2550" height="1435" alt="ForgeLab-이미지-15" src="https://github.com/user-attachments/assets/aa66ddb7-ce3a-418c-857a-c1ced3732159" />
+<img width="2550" height="1435" alt="ForgeLab-이미지-16" src="https://github.com/user-attachments/assets/6b2b2d6a-69a5-4b37-8b37-cb242341af31" />
+<img width="2550" height="1435" alt="ForgeLab-이미지-17" src="https://github.com/user-attachments/assets/685ac004-b4f7-41ff-acde-0638413e9032" />
+<img width="2550" height="1435" alt="ForgeLab-이미지-18" src="https://github.com/user-attachments/assets/ae13f595-fcee-496d-a056-785620159c06" />
+<img width="2550" height="1435" alt="ForgeLab-이미지-19" src="https://github.com/user-attachments/assets/d76f18ec-8eb6-4d13-9879-d6c06c4c6855" />
+<img width="2550" height="1435" alt="ForgeLab-이미지-20" src="https://github.com/user-attachments/assets/1b28f806-02c1-42ff-92ea-676370600901" />
+<img width="2550" height="1435" alt="ForgeLab-이미지-21" src="https://github.com/user-attachments/assets/f350ac9d-5735-4bbf-b502-1c8a21886d4f" />
+
+
 기업별 면접 스타일을 재현하는 **AI 압박면접 시뮬레이터**.
 이력서·직무를 근거로 한 질문 → 실시간 답변 평가 → **꼬리(압박) 질문** → 최종 리포트까지,
 실제 면접의 흐름을 한 번에 시뮬레이션한다. 논리력뿐 아니라 **평정심(비언어 신호)** 까지 정량화한다.
@@ -431,7 +455,7 @@ cp .env.example .env            # 값 채우기(DB/JWT/SMTP/OLLAMA/도메인)
 
 > 앱 포트(8787)는 도커·서버 기본값으로 고정되므로 `.env` 에 둘 필요가 없다.
 >
-> ⚠️ **`VITE_` 접두사 변수는 서버가 아니라 클라이언트(Vite) 빌드 시점에 번들로 박힌다.** 그래서 다른 변수들과 달리 `docker-compose.prod.yml` 의 `environment`(런타임)가 아니라 **`build.args`(빌드타임)** 로 전달되며, `.dockerignore` 가 `.env` 를 빌드 컨텍스트에서 제외하므로 이 경로가 필수다. 값을 바꾸면 반드시 `./deploy.sh`(=`--build`)로 **다시 빌드**해야 반영된다.
+> **`VITE_` 접두사 변수는 서버가 아니라 클라이언트(Vite) 빌드 시점에 번들로 박힌다.** 그래서 다른 변수들과 달리 `docker-compose.prod.yml` 의 `environment`(런타임)가 아니라 **`build.args`(빌드타임)** 로 전달되며, `.dockerignore` 가 `.env` 를 빌드 컨텍스트에서 제외하므로 이 경로가 필수다. 값을 바꾸면 반드시 `./deploy.sh`(=`--build`)로 **다시 빌드**해야 반영된다.
 
 ---
 
@@ -478,4 +502,4 @@ autocapture 로는 "버튼 클릭" 수준까지만 구분되므로, 제품 고�
 - **Session Replay**: 개별 세션에서 실제 사용 화면을 다시 보며 이탈 지점을 확인.
 - **AI 에이전트**(좌측 "에이전트"): 자연어로 차트를 만든다. 예: *"최근 7일간 각 커스텀 이벤트의 발생 횟수를 막대그래프로 비교해줘"*, *"모의면접 시작 → 답변 제출 → 완료 → 녹화 저장 퍼널 그려줘"*.
 
-> 💡 반영에 수십 초 지연이 있을 수 있고, 광고/트래킹 차단 확장프로그램이 `api2.amplitude.com` 요청을 막으면 이벤트가 누락된다. 확인 시 시크릿창을 쓰거나 DevTools → Network 에서 `httpapi` 요청이 200 인지(응답의 `events_ingested`) 본다.
+> 반영에 수십 초 지연이 있을 수 있고, 광고/트래킹 차단 확장프로그램이 `api2.amplitude.com` 요청을 막으면 이벤트가 누락된다. 확인 시 시크릿창을 쓰거나 DevTools → Network 에서 `httpapi` 요청이 200 인지(응답의 `events_ingested`) 본다.
