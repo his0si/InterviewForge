@@ -4,35 +4,6 @@ https://github.com/user-attachments/assets/5f73ff5a-98d5-4803-b104-9da5d76dfdaa
 
 <img width="9933" height="14043" alt="캡스톤디자인_단일전공_SEED (3)" src="https://github.com/user-attachments/assets/77ca1ce0-6b66-40c4-b915-6474472ad318" />
 
-
-<img width="2550" height="1435" alt="ForgeLab-이미지-0" src="https://github.com/user-attachments/assets/f1dc135e-6cc9-4aab-ad94-11968caf1940" />
-<img width="2550" height="1435" alt="ForgeLab-이미지-1" src="https://github.com/user-attachments/assets/a65a072b-9c6f-4043-a94b-91f6fdc576bb" />
-<img width="2550" height="1435" alt="ForgeLab-이미지-2" src="https://github.com/user-attachments/assets/d2235ba7-8630-4439-8baa-097ad9be01e8" />
-<img width="2550" height="1435" alt="ForgeLab-이미지-3" src="https://github.com/user-attachments/assets/a168c7fa-d30b-4de3-aea2-082258cb30f3" />
-<img width="2550" height="1435" alt="ForgeLab-이미지-4" src="https://github.com/user-attachments/assets/f4f46d98-4bfd-485c-88c7-224b394c85d4" />
-<img width="2550" height="1435" alt="ForgeLab-이미지-5" src="https://github.com/user-attachments/assets/15564955-20f5-4e3f-a244-8745b57594ae" />
-<img width="2550" height="1435" alt="ForgeLab-이미지-6" src="https://github.com/user-attachments/assets/2d606f57-7c8e-4b43-9715-f21f67ee9b4e" />
-<img width="2550" height="1435" alt="ForgeLab-이미지-7" src="https://github.com/user-attachments/assets/72f1107b-6e80-461c-b7bb-95e7b1f0d84b" />
-<img width="2550" height="1435" alt="ForgeLab-이미지-8" src="https://github.com/user-attachments/assets/bc37e67c-091a-4ef4-8cd6-d6748944581a" />
-<img width="2550" height="1435" alt="ForgeLab-이미지-9" src="https://github.com/user-attachments/assets/d6456183-347c-4646-a451-1ead59c0c7c7" />
-<img width="2550" height="1435" alt="ForgeLab-이미지-10" src="https://github.com/user-attachments/assets/b52f702a-9051-4883-86d4-675bdee95458" />
-<img width="2550" height="1435" alt="ForgeLab-이미지-11" src="https://github.com/user-attachments/assets/ec124d8e-4f27-4fb2-a345-7bfc73cf717e" />
-<img width="2550" height="1435" alt="ForgeLab-이미지-12" src="https://github.com/user-attachments/assets/e3cf81cc-fca6-4895-b75b-3847043ee0b8" />
-<img width="2550" height="1435" alt="ForgeLab-이미지-13" src="https://github.com/user-attachments/assets/6fd6e13b-a229-4dc9-bca3-c5f58dfb07c6" />
-<img width="2550" height="1435" alt="ForgeLab-이미지-14" src="https://github.com/user-attachments/assets/92721084-b2a2-4f57-8ccc-8f4727490808" />
-<img width="2550" height="1435" alt="ForgeLab-이미지-15" src="https://github.com/user-attachments/assets/aa66ddb7-ce3a-418c-857a-c1ced3732159" />
-<img width="2550" height="1435" alt="ForgeLab-이미지-16" src="https://github.com/user-attachments/assets/6b2b2d6a-69a5-4b37-8b37-cb242341af31" />
-<img width="2550" height="1435" alt="ForgeLab-이미지-17" src="https://github.com/user-attachments/assets/685ac004-b4f7-41ff-acde-0638413e9032" />
-<img width="2550" height="1435" alt="ForgeLab-이미지-18" src="https://github.com/user-attachments/assets/ae13f595-fcee-496d-a056-785620159c06" />
-<img width="2550" height="1435" alt="ForgeLab-이미지-19" src="https://github.com/user-attachments/assets/d76f18ec-8eb6-4d13-9879-d6c06c4c6855" />
-<img width="2550" height="1435" alt="ForgeLab-이미지-20" src="https://github.com/user-attachments/assets/1b28f806-02c1-42ff-92ea-676370600901" />
-<img width="2550" height="1435" alt="ForgeLab-이미지-21" src="https://github.com/user-attachments/assets/f350ac9d-5735-4bbf-b502-1c8a21886d4f" />
-
-
-기업별 면접 스타일을 재현하는 **AI 압박면접 시뮬레이터**.
-이력서·직무를 근거로 한 질문 → 실시간 답변 평가 → **꼬리(압박) 질문** → 최종 리포트까지,
-실제 면접의 흐름을 한 번에 시뮬레이션한다. 논리력뿐 아니라 **평정심(비언어 신호)** 까지 정량화한다.
-
 - 운영: **[interviewforge.kro.kr](https://interviewforge.kro.kr)**
 - 구성: npm workspaces 모노레포(client · server · shared) + 별도 Python 크롤러
 - 특징: **모든 AI 추론을 로컬 LLM(Ollama)** 으로 처리 → 이력서·면접 데이터가 외부로 나가지 않음
