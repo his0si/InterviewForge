@@ -2,7 +2,8 @@
 
 https://github.com/user-attachments/assets/5f73ff5a-98d5-4803-b104-9da5d76dfdaa
 
-<img width="6622" height="9362" alt="InterviewForge_poster-1" src="https://github.com/user-attachments/assets/74e78237-613f-4ab6-897e-3d4041623fd2" />
+<img width="9933" height="14043" alt="캡스톤디자인_단일전공_SEED (3)" src="https://github.com/user-attachments/assets/77ca1ce0-6b66-40c4-b915-6474472ad318" />
+
 
 <img width="2550" height="1435" alt="ForgeLab-이미지-0" src="https://github.com/user-attachments/assets/f1dc135e-6cc9-4aab-ad94-11968caf1940" />
 <img width="2550" height="1435" alt="ForgeLab-이미지-1" src="https://github.com/user-attachments/assets/a65a072b-9c6f-4043-a94b-91f6fdc576bb" />
